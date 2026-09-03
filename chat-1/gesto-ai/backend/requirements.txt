@@ -1,0 +1,20 @@
+# Gesto AI backend dependencies
+# Version ranges verified against the installed environment (Windows):
+# mediapipe 1.0.1, tensorflow 2.19.1 (ships Keras 3.15, loads .h5),
+# fastapi 0.141.1, numpy 1.26.4, scikit-learn 1.9.
+# Python version: pins assume Python 3.10–3.12 — tensorflow 2.19 and
+# numpy 1.26 have no wheels for 3.13+.
+# MediaPipe >= 0.10 provides the Tasks API
+# (mediapipe.tasks.python.vision.HandLandmarker) with RunningMode.VIDEO.
+#
+# NOTE: opencv-python is intentionally NOT pinned here. mediapipe
+# transitively installs opencv-contrib-python; requesting opencv-python
+# as well leaves BOTH dists installed, which causes the known Windows
+# mixed-cv2 DLL failure (cv2 imports break or crashes at runtime).
+
+fastapi>=0.111,<1.0
+uvicorn[standard]>=0.30,<1.0
+mediapipe>=0.10.14,<2.0
+tensorflow>=2.16,<2.20
+numpy>=1.26,<2.0
+scikit-learn>=1.4,<2.0

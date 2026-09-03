@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Gesto AI — real-time Pakistan Sign Language to Urdu speech translation for deaf and mute individuals." />
+  <title>Gesto AI — Pakistan Sign Language to Urdu Speech</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ============ STICKY NAV ============ -->
+  <header class="nav">
+    <a class="nav__brand" href="#hero" aria-label="Gesto AI home">
+      <span class="nav__brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 11V6a1.5 1.5 0 0 1 3 0v4"/>
+          <path d="M10 10V4.5a1.5 1.5 0 0 1 3 0V10"/>
+          <path d="M13 10V5.5a1.5 1.5 0 0 1 3 0V12"/>
+          <path d="M16 12v-1a1.5 1.5 0 0 1 3 0v4c0 3.5-2.5 6-6 6h-1c-2 0-3.2-.7-4.3-1.8L4 15.5c-.6-.6-.6-1.5 0-2.1.6-.6 1.5-.6 2.1 0L7 14.3"/>
+        </svg>
+      </span>
+      Gesto&nbsp;AI
+    </a>
+    <nav class="nav__links" aria-label="Sections">
+      <a href="#demo">Demo</a>
+      <a href="#about">Problem</a>
+      <a href="#team">Team</a>
+      <a href="#tech">Tech</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ============ 1. HERO ============ -->
+    <section id="hero" class="hero" aria-labelledby="hero-title">
+      <div class="hero__bg" aria-hidden="true"></div>
+
+      <div class="hero__content">
+        <p class="hero__eyebrow reveal">Real-time PSL &rarr; Urdu Speech</p>
+        <h1 id="hero-title" class="hero__title reveal d1">Gesto <span>AI</span></h1>
+        <p class="hero__tagline reveal d2">
+          Turning Pakistan Sign Language into spoken Urdu — instantly —
+          so deaf and mute voices are finally heard.
+        </p>
+        <div class="hero__actions reveal d3">
+          <a href="#demo" class="btn btn--primary" id="hero-cta">
+            Try Live Demo
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14m0 0 6-6m-6 6-6-6"/></svg>
+          </a>
+          <a href="#about" class="btn btn--ghost">Why it matters</a>
+        </div>
+      </div>
+
+      <div class="hero__wave" aria-hidden="true">
+        <svg viewBox="0 0 1440 90" preserveAspectRatio="none"><path d="M0,48 C240,90 480,6 720,42 C960,78 1200,18 1440,54 L1440,90 L0,90 Z" fill="var(--surface)"/></svg>
+      </div>
+    </section>
+
+    <!-- ============ 2. LIVE DEMO ============ -->
+    <section id="demo" class="section demo" aria-labelledby="demo-title">
+      <div class="section__head">
+        <p class="section__eyebrow">Live Demo</p>
+        <h2 id="demo-title" class="section__title">Sign it. We say it.</h2>
+        <p class="section__sub">Start the camera, sign in front of it, and watch Gesto AI recognize your gesture in real time.</p>
+      </div>
+
+      <div class="demo__grid">
+
+        <!-- Camera panel -->
+        <div class="panel demo__camera-panel">
+          <div class="demo__camera">
+            <video id="webcam" autoplay playsinline muted aria-label="Webcam preview of the signer"></video>
+            <div class="demo__camera-overlay" id="camera-placeholder">
+              <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+              </svg>
+              <p>Camera is off</p>
+              <span>Tap “Start Camera” to begin</span>
+            </div>
+            <div class="demo__scanline" id="scanline" aria-hidden="true"></div>
+          </div>
+
+          <div class="demo__controls">
+            <button id="start-camera" class="btn btn--primary btn--tap">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              Start Camera
+            </button>
+            <button id="stop-camera" class="btn btn--ghost btn--tap" disabled>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+              Stop
+            </button>
+            <button id="speaker-btn" class="speaker-btn" aria-label="Toggle Urdu voice output" aria-pressed="false" title="Urdu voice off">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M11 5 6 9H2v6h4l5 4V5z"/><path class="speaker-wave" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="speaker-wave" d="M18.5 5.5a9.5 9.5 0 0 1 0 13"/>
+              </svg>
+              <span class="speaker-btn__tip" role="tooltip">Toggle Urdu voice</span>
+            </button>
+          </div>
+
+          <p class="demo__conn" id="conn-status" role="status">
+            <span class="conn-dot" id="conn-dot"></span>
+            <span id="conn-text">Server disconnected</span>
+            <button id="reconnect-btn" class="conn-retry" hidden>Reconnect</button>
+          </p>
+        </div>
+
+        <!-- Results panel -->
+        <div class="panel demo__results-panel">
+          <p class="results__label">Recognized Gesture</p>
+
+          <div class="results__gesture-wrap" aria-live="polite">
+            <p class="results__gesture" id="gesture-name">&mdash;</p>
+            <p class="results__status" id="status-line">Waiting for camera&hellip;</p>
+          </div>
+
+          <div class="results__confidence">
+            <div class="results__confidence-head">
+              <span>Confidence</span>
+              <span id="confidence-pct" class="results__pct">0%</span>
+            </div>
+            <div class="progress" role="progressbar" aria-label="Recognition confidence"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-wrap">
+              <div class="progress__fill" id="progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="results__history">
+            <p class="results__label results__label--small">Recent Gestures</p>
+            <ul class="history-list" id="history-list" aria-live="polite">
+              <li class="history-list__empty" id="history-empty">Recognized gestures will appear here.</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ 3. PROBLEM / ABOUT ============ -->
+    <section id="about" class="section section--alt" aria-labelledby="about-title">
+      <div class="section__head">
+        <p class="section__eyebrow">The Problem</p>
+        <h2 id="about-title" class="section__title">9 million Pakistanis sign. Almost nobody hears them.</h2>
+      </div>
+
+      <div class="about__grid">
+        <div class="about__text">
+          <p>
+            Pakistan has one of the largest deaf populations in the world, yet sign-language
+            interpreters are scarce and most hearing people cannot understand PSL. Everyday
+            moments — a doctor's visit, a market purchase, an emergency — become walls of silence.
+          </p>
+          <p>
+            <strong>Gesto AI</strong> bridges that gap: a camera watches the signer's hands, an
+            AI model reads the gesture, and the app speaks it aloud in Urdu — in real time,
+            on ordinary devices, with no special hardware.
+          </p>
+        </div>
+
+        <ol class="steps" aria-label="How Gesto AI works">
+          <li class="step">
+            <div class="step__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            </div>
+            <h3>Camera</h3>
+            <p>Captures the signer's hand gestures through any phone or laptop webcam.</p>
+          </li>
+          <li class="step-arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg>
+          </li>
+          <li class="step">
+            <div class="step__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/><circle cx="12" cy="12" r="2.5"/></svg>
+            </div>
+            <h3>AI Model</h3>
+            <p>MediaPipe tracks the hand while a TensorFlow classifier names the PSL gesture.</p>
+          </li>
+          <li class="step-arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg>
+          </li>
+          <li class="step">
+            <div class="step__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9.5 9.5 0 0 1 0 13"/></svg>
+            </div>
+            <h3>Urdu Speech</h3>
+            <p>The recognized gesture is spoken aloud in Urdu, closing the conversation gap.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    
+        <!-- ============ 4. TEAM ============ -->
+    <section id="team" class="section" aria-labelledby="team-title">
+      <div class="section__head">
+        <p class="section__eyebrow">The Team</p>
+        <h2 id="team-title" class="section__title">The minds behind the magic.</h2>
+      </div>
+
+      <div class="team__grid">
+        <article class="member">
+          <div class="member__avatar">
+            <img src="team/ghuzaif.jpeg" alt="Muhammad Ghuzaif Arif" />
+          </div>
+          <h3>Muhammad Ghuzaif Arif</h3>
+          <p class="member__role">ML Engineer</p>
+          <p class="member__desc">Trains and tunes the PSL gesture classifier on top of MediaPipe hand landmarks.</p>
+        </article>
+        <article class="member">
+          <div class="member__avatar">
+            <img src="team/adeel.jpeg" alt="Adeel Shahbaz" />
+          </div>
+          <h3>Adeel Shahbaz</h3>
+          <p class="member__role">Backend Engineer</p>
+          <p class="member__desc">Builds the FastAPI inference server and the real-time WebSocket prediction pipeline.</p>
+        </article>
+        <article class="member">
+          <div class="member__avatar">
+            <img src="team/ishmal.jpeg" alt="Ishmal Nayyab" />
+          </div>
+          <h3>Ishmal Nayyab</h3>
+          <p class="member__role">Frontend &amp; UX</p>
+          <p class="member__desc">Crafts the accessible, judge-friendly interface and the Urdu voice experience.</p>
+        </article>
+      </div>
+    </section>
+
+         <!-- ============ 5. TECH STACK ============ -->
+    <section id="tech" class="section section--alt" aria-labelledby="tech-title">
+      <div class="section__head">
+        <p class="section__eyebrow">Tech Stack</p>
+        <h2 id="tech-title" class="section__title">Small stack, real-time results.</h2>
+      </div>
+      <ul class="badges" aria-label="Technologies used">
+        <li class="badge"><span class="badge__dot badge__dot--teal" aria-hidden="true"></span>MediaPipe Hands &amp; Pose</li>
+        <li class="badge"><span class="badge__dot badge__dot--blue" aria-hidden="true"></span>TensorFlow</li>
+        <li class="badge"><span class="badge__dot badge__dot--deep" aria-hidden="true"></span>FastAPI</li>
+        <li class="badge"><span class="badge__dot badge__dot--teal" aria-hidden="true"></span>WebSocket</li>
+        <li class="badge"><span class="badge__dot badge__dot--blue" aria-hidden="true"></span>Python</li>
+        <li class="badge"><span class="badge__dot badge__dot--deep" aria-hidden="true"></span>HTML5 &amp; CSS3</li>
+        <li class="badge"><span class="badge__dot badge__dot--teal" aria-hidden="true"></span>Vanilla JavaScript</li>
+      </ul>
+    </section>
+  </main>
+  <footer class="footer">
+    <p><strong>Gesto AI</strong> &mdash; Hackathon build. Every sign deserves a voice.</p>
+  </footer>
+  <script src="script.js"></script>
+</body>
+</html>
