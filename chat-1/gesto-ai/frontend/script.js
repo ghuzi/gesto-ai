@@ -8,7 +8,7 @@
 'use strict';
 
 /* ---------- Configuration ---------- */
-const WS_URL = 'ws://localhost:8000/ws/predict';
+const WS_URL = 'wss://gesto-ai-production.up.railway.app/ws/predict';
 const FRAME_INTERVAL_MS = 100;   // ~10 fps to the inference server
 const HISTORY_CAP = 8;           // max entries in the recent-gestures list
 const RECONNECT_DELAY_MS = 3000; // auto-retry backoff
