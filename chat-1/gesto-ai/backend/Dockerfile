@@ -8,6 +8,10 @@ RUN apt-get update && apt-get install -y \
     libsm6 \
     libxext6 \
     libxrender1 \
+    libegl1 \
+    libgles2 \
+    libgbm1 \
+    libxkbcommon0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
