@@ -5,11 +5,11 @@ on:
     branches: [main, arena/2350a3d7-gesto-ai]
     tags: ['android-v*']
     paths:
-      - 'mobile/**'
+      - 'chat-1/gesto-ai/mobile/**'
       - '.github/workflows/mobile-apk.yml'
   pull_request:
     paths:
-      - 'mobile/**'
+      - 'chat-1/gesto-ai/mobile/**'
       - '.github/workflows/mobile-apk.yml'
   workflow_dispatch:
     inputs:
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: mobile
+        working-directory: chat-1/gesto-ai/mobile
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -122,18 +122,18 @@ jobs:
       - name: Collect APKs
         run: |
           set -e
-          mkdir -p ../artifacts
-          cp build/app/outputs/flutter-apk/app-release.apk                    ../artifacts/gesto-ai-1.0.0-universal.apk
-          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk        ../artifacts/gesto-ai-1.0.0-armeabi-v7a.apk
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk          ../artifacts/gesto-ai-1.0.0-arm64-v8a.apk
-          cp build/app/outputs/flutter-apk/app-x86_64-release.apk             ../artifacts/gesto-ai-1.0.0-x86_64.apk
-          ls -lh ../artifacts
+          mkdir -p $GITHUB_WORKSPACE/artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk                    $GITHUB_WORKSPACE/artifacts/gesto-ai-1.0.0-universal.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk        $GITHUB_WORKSPACE/artifacts/gesto-ai-1.0.0-armeabi-v7a.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk          $GITHUB_WORKSPACE/artifacts/gesto-ai-1.0.0-arm64-v8a.apk
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk             $GITHUB_WORKSPACE/artifacts/gesto-ai-1.0.0-x86_64.apk
+          ls -lh $GITHUB_WORKSPACE/artifacts
 
       - name: Verify APK signatures
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           echo "Using $BT"
-          for f in ../artifacts/*.apk; do
+          for f in $GITHUB_WORKSPACE/artifacts/*.apk; do
             echo "=== $(basename "$f") ==="
             "$BT/apksigner" verify --print-certs "$f" | head -5
             "$BT/aapt2" dump badging "$f" 2>/dev/null | head -4 || true
@@ -181,7 +181,7 @@ jobs:
             echo ""
             echo "| APK | Size |"
             echo "| --- | --- |"
-            for f in ../artifacts/*.apk; do
+            for f in $GITHUB_WORKSPACE/artifacts/*.apk; do
               echo "| $(basename "$f") | $(du -h "$f" | cut -f1) |"
             done
           } >> "$GITHUB_STEP_SUMMARY"
