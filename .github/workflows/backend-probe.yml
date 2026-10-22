@@ -33,6 +33,20 @@ jobs:
             -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
             "$URL/ws/predict"
 
+      - name: Probe Vercel frontend for the current backend URL
+        if: always()
+        run: |
+          set +e
+          for f in script.js index.html; do
+            code=$(curl -sS -o "/tmp/vercel_$f" -w '%{http_code}' --max-time 45 "https://gesto-ai-frontend.vercel.app/$f")
+            echo "--- $f ($code) ---"
+            grep -oE '(wss?|https?)://[a-zA-Z0-9._-]+\.(railway\.app|onrender\.com|hf\.space|koyeb\.app|fly\.dev)[^"'"'"' ]*' "/tmp/vercel_$f" | sort -u | head -10
+          done
+          for host in gesto-ai.up.railway.app gesto-ai-backend.up.railway.app gesto-ai-api.up.railway.app; do
+            echo -n "$host -> "
+            curl -sS -o /dev/null -w '%{http_code}\n' --max-time 15 "https://$host/health"
+          done
+
       - name: Report to annotations
         if: always()
         run: |
@@ -58,4 +72,7 @@ jobs:
           print(f'::notice::HEADERS: {enc(headers)}')
           print(f'::notice::BODY: {enc(body)}')
           print(f'::notice::ROOT: {enc(root)}')
+          for name in ('script.js', 'index.html'):
+              text = load(f'/tmp/vercel_{name}', 400).replace('\n', ' ')
+              print(f'::notice::VERCEL {name}: {enc(text)}')
           PY
