@@ -37,14 +37,29 @@ jobs:
             echo "attempt $i -> $code"
             [ "$code" = "200" ] && break
             if [ "$(docker inspect -f '{{.State.Running}}' gesto)" != "true" ]; then
-              echo "::error::container exited"
-              docker logs gesto | tail -40
+              echo "container exited"
+              docker logs gesto > /tmp/clogs 2>&1 || true
+              python3 - <<'PY'
+              with open('/tmp/clogs', encoding='utf-8', errors='replace') as fh:
+                  lines = fh.read().splitlines()
+              for line in lines[-25:]:
+                  text = line.replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+                  if text.strip():
+                      print('::error::' + text[:900])
+              PY
               exit 1
             fi
           done
           echo "=== /health ==="; cat /tmp/health; echo
           echo "::notice::HEALTH $(head -c 1200 /tmp/health)"
           echo "=== container logs (tail) ==="; docker logs gesto 2>&1 | tail -20
+          docker logs gesto > /tmp/clogs 2>&1 || true
+          python3 - <<'PY'
+          with open('/tmp/clogs', encoding='utf-8', errors='replace') as fh:
+              lines = fh.read().splitlines()
+          for line in lines[-12:]:
+              print('::warning::' + line.replace('%', '%25')[:400])
+          PY
           python3 - <<'PY'
           import json
           try:
