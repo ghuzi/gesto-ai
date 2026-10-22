@@ -1,0 +1,9 @@
+name: smoke
+on:
+  push:
+    branches: [arena/2350a3d7-gesto-ai]
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "actions are alive"
