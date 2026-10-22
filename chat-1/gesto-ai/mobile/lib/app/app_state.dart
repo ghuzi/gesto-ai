@@ -39,7 +39,11 @@ class AppState extends ChangeNotifier {
   BackendHealth? _health;
   bool _healthLoading = false;
   String? _healthError;
+  BackendFailure? _healthFailure;
   DateTime? _healthCheckedAt;
+  Timer? _healthRetryTimer;
+  int _healthRetrySeconds = 0;
+  bool _disposed = false;
 
   // ------------------------------------------------------------- getters
   AppLanguage get language => _language;
@@ -50,8 +54,14 @@ class AppState extends ChangeNotifier {
   BackendHealth? get health => _health;
   bool get healthLoading => _healthLoading;
   String? get healthError => _healthError;
+  BackendFailure? get healthFailure => _healthFailure;
   DateTime? get healthCheckedAt => _healthCheckedAt;
+  bool get healthAutoRetrying => _healthRetryTimer?.isActive ?? false;
   String get baseUrl => backend.baseUrl;
+
+  /// True when the address answered but no Gesto backend lives there —
+  /// the user has to point the app at a deployed server.
+  bool get backendMissing => _healthFailure == BackendFailure.notDeployed;
 
   List<String> get gestureLabels {
     final List<String>? live = _health?.gestureLabels;
@@ -93,32 +103,32 @@ class AppState extends ChangeNotifier {
         _history.clear();
       }
     }
-    notifyListeners();
+    _notify();
   }
 
   // ------------------------------------------------------------ settings
   Future<void> setLanguage(AppLanguage value) async {
     if (_language == value) return;
     _language = value;
-    notifyListeners();
+    _notify();
     await _prefs?.setString(_kLanguage, value.code);
   }
 
   Future<void> completeOnboarding() async {
     _onboarded = true;
-    notifyListeners();
+    _notify();
     await _prefs?.setBool(_kOnboarded, true);
   }
 
   Future<void> setSpeechEnabled(bool value) async {
     _speechEnabled = value;
-    notifyListeners();
+    _notify();
     await _prefs?.setBool(_kSpeechEnabled, value);
   }
 
   Future<void> setSpeechRate(double value) async {
     _speechRate = value.clamp(0.25, 0.9);
-    notifyListeners();
+    _notify();
     await _prefs?.setDouble(_kSpeechRate, _speechRate);
   }
 
@@ -126,31 +136,74 @@ class AppState extends ChangeNotifier {
     backend.baseUrl = value;
     _health = null;
     _healthError = null;
-    notifyListeners();
+    _healthFailure = null;
+    _healthRetrySeconds = 0;
+    _healthRetryTimer?.cancel();
+    _notify();
     await _prefs?.setString(_kBaseUrl, backend.baseUrl);
+    unawaited(refreshHealth());
   }
 
   Future<void> resetBaseUrl() => setBaseUrl(AppConfig.defaultBaseUrl);
 
   // -------------------------------------------------------------- health
-  Future<void> refreshHealth() async {
-    if (_healthLoading) return;
+  /// Probes `/health`. While the server stays unreachable it re-tries on its
+  /// own (15s → 30s → 60s), so a sleeping free-tier instance heals itself
+  /// without the user tapping anything.
+  Future<void> refreshHealth({bool silent = false}) async {
+    if (_healthLoading || _disposed) return;
+    _healthRetryTimer?.cancel();
     _healthLoading = true;
-    _healthError = null;
-    notifyListeners();
+    if (!silent) _healthError = null;
+    _notify();
     try {
       final BackendHealth result = await backend.fetchHealth();
       _health = result;
       _healthError = null;
+      _healthFailure = null;
+      _healthRetrySeconds = 0;
+    } on BackendException catch (error) {
+      _health = null;
+      _healthError = error.message;
+      _healthFailure = error.failure;
+      _scheduleHealthRetry();
     } on Object catch (error) {
       _health = null;
       _healthError = error.toString();
+      _healthFailure = BackendFailure.unreachable;
+      _scheduleHealthRetry();
     } finally {
       _healthLoading = false;
       _healthCheckedAt = DateTime.now();
-      notifyListeners();
+      _notify();
     }
   }
+
+  void _scheduleHealthRetry() {
+    if (_disposed) return;
+    _healthRetryTimer?.cancel();
+    _healthRetrySeconds = _healthRetrySeconds == 0
+        ? 15
+        : (_healthRetrySeconds >= 60 ? 60 : _healthRetrySeconds * 2);
+    _healthRetryTimer = Timer(
+      Duration(seconds: _healthRetrySeconds),
+      () {
+        if (!_disposed) unawaited(refreshHealth(silent: true));
+      },
+    );
+  }
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _healthRetryTimer?.cancel();
+    super.dispose();
+  }
+
 
   /// Quick connectivity probe used by Settings → "Test connection".
   Future<BackendHealth> probe(String url) async {
@@ -177,13 +230,13 @@ class AppState extends ChangeNotifier {
         _history.removeRange(_maxHistory, _history.length);
       }
     }
-    notifyListeners();
+    _notify();
     unawaited(_persistHistory());
   }
 
   Future<void> clearHistory() async {
     _history.clear();
-    notifyListeners();
+    _notify();
     await _prefs?.remove(_kHistory);
   }
 

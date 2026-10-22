@@ -10,7 +10,7 @@ Railway server.
 | Package | `ai.gesto.app` |
 | Min Android | 7.0 (Flutter default) |
 | Built with | Flutter stable · Dart 3 · Material 3 |
-| Backend | `https://gesto-ai-production.up.railway.app` (configurable) |
+| Backend | configurable — default `https://gesto-ai-production.up.railway.app` (offline since Oct 2026, see below) |
 
 ## Download the APK
 
@@ -37,6 +37,17 @@ signed with the debug key, so Play Protect may show a "scan" prompt — choose
 To build a new release: `git tag android-v1.0.1 && git push origin android-v1.0.1`
 (bump `version:` in `pubspec.yaml` first). The tag push builds and uploads the
 APKs automatically.
+
+## Server unreachable?
+
+The app never crashes when the backend is down — the Home card shows what went
+wrong, keeps retrying on its own (15 s → 30 s → 60 s) and offers **Change server**.
+
+* `HTTP 404 — no backend is deployed at this address` → the Railway service was
+  deleted. Follow [../backend/DEPLOY.md](../backend/DEPLOY.md) to redeploy,
+  then set the new URL in **Home → Server status → Change server**.
+* `HTTP 502/503` or a timeout → the free instance is sleeping; wait a minute.
+* No internet → fix Wi-Fi/mobile data.
 
 ## What the app does
 

@@ -1,14 +1,41 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
 import '../app/config.dart';
 import '../models/backend_health.dart';
 
+/// What went wrong when talking to the backend, in a form the UI can explain.
+enum BackendFailure {
+  /// DNS, TLS, refused connection, airplane mode…
+  unreachable,
+
+  /// The host answered, but there is no Gesto backend behind it
+  /// (Railway returns 404 "Application not found" for deleted services).
+  notDeployed,
+
+  /// 502/503/504 — the platform is up, the container is starting/sleeping.
+  startingUp,
+
+  /// No answer within the timeout (free tiers can take a minute to wake).
+  timeout,
+
+  /// A response we could not use.
+  badResponse,
+}
+
 class BackendException implements Exception {
-  BackendException(this.message);
+  BackendException(
+    this.message, {
+    this.failure = BackendFailure.unreachable,
+    this.statusCode,
+  });
 
   final String message;
+  final BackendFailure failure;
+  final int? statusCode;
 
   @override
   String toString() => message;
@@ -55,41 +82,85 @@ class BackendService {
     );
   }
 
-  Future<BackendHealth> fetchHealth({Duration timeout = const Duration(seconds: 15)}) async {
+  /// Free hosts sleep; the first request of the day can take a minute.
+  Future<BackendHealth> fetchHealth({
+    Duration timeout = const Duration(seconds: 45),
+  }) async {
     http.Response response;
     try {
-      response = await http
-          .get(healthUri, headers: const <String, String>{'Accept': 'application/json'})
-          .timeout(timeout);
-    } on Exception catch (error) {
-      throw BackendException(_humanError(error));
+      response = await http.get(
+        healthUri,
+        headers: const <String, String>{'Accept': 'application/json'},
+      ).timeout(timeout);
+    } on TimeoutException {
+      throw BackendException(
+        'Timed out after ${timeout.inSeconds}s — the server may be waking up',
+        failure: BackendFailure.timeout,
+      );
+    } on SocketException catch (error) {
+      throw BackendException(
+        _socketMessage(error),
+        failure: BackendFailure.unreachable,
+      );
+    } on http.ClientException catch (error) {
+      throw BackendException(
+        error.message,
+        failure: BackendFailure.unreachable,
+      );
+    } on HandshakeException catch (error) {
+      throw BackendException(
+        'TLS handshake failed (${error.message})',
+        failure: BackendFailure.unreachable,
+      );
+    } on Object catch (error) {
+      throw BackendException(error.toString().replaceFirst('Exception: ', ''));
     }
 
-    if (response.statusCode != 200) {
-      throw BackendException('HTTP ${response.statusCode}');
+    final int code = response.statusCode;
+
+    if (code == 404) {
+      // Railway: {"status":"error","code":404,"message":"Application not found"}
+      throw BackendException(
+        'HTTP 404 — no backend is deployed at this address',
+        failure: BackendFailure.notDeployed,
+        statusCode: code,
+      );
+    }
+    if (code == 502 || code == 503 || code == 504) {
+      throw BackendException(
+        'HTTP $code — the server is starting up',
+        failure: BackendFailure.startingUp,
+        statusCode: code,
+      );
+    }
+    if (code != 200) {
+      throw BackendException(
+        'HTTP $code',
+        failure: BackendFailure.badResponse,
+        statusCode: code,
+      );
     }
 
     try {
       final Object? decoded = jsonDecode(response.body);
       if (decoded is! Map<String, dynamic>) {
-        throw BackendException('Unexpected response');
+        throw const FormatException('not a JSON object');
       }
       return BackendHealth.fromJson(decoded);
-    } on BackendException {
-      rethrow;
     } on Object {
-      throw BackendException('Malformed health response');
+      throw BackendException(
+        'Malformed /health response',
+        failure: BackendFailure.badResponse,
+        statusCode: code,
+      );
     }
   }
 
-  String _humanError(Object error) {
-    final String text = error.toString();
-    if (text.contains('TimeoutException')) {
-      return 'Timed out — the server may be waking up';
-    }
-    if (text.contains('SocketException') || text.contains('Failed host lookup')) {
-      return 'Cannot reach the server';
-    }
-    return text.replaceFirst('Exception: ', '');
+  String _socketMessage(SocketException error) {
+    final String text = '${error.message} ${error.osError?.message ?? ''}';
+    if (text.contains('Failed host lookup')) return 'Unknown host — check the address';
+    if (text.contains('Connection refused')) return 'Connection refused';
+    if (text.contains('Network is unreachable')) return 'No internet connection';
+    return error.message;
   }
 }

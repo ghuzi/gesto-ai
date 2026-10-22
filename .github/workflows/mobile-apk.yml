@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main, arena/2350a3d7-gesto-ai]
+    branches: [main, arena/f2987663-gesto-ai]
     tags: ['android-v*']
     paths:
       - 'chat-1/gesto-ai/mobile/**'
@@ -56,6 +56,16 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Read app version
+        id: version
+        run: |
+          line=$(grep -E '^version:' pubspec.yaml | head -1)
+          version=$(echo "$line" | sed -E 's/^version:[[:space:]]*//' | cut -d+ -f1)
+          build=$(echo "$line" | sed -E 's/.*\+//')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "::notice::Building Gesto AI Android $version+$build"
 
       - name: Static analysis
         run: |
@@ -120,30 +130,32 @@ jobs:
           exit 0
 
       - name: Collect APKs
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -e
-          mkdir -p $GITHUB_WORKSPACE/artifacts
-          cp build/app/outputs/flutter-apk/app-release.apk                    $GITHUB_WORKSPACE/artifacts/gesto-ai-1.0.0-universal.apk
-          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk        $GITHUB_WORKSPACE/artifacts/gesto-ai-1.0.0-armeabi-v7a.apk
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk          $GITHUB_WORKSPACE/artifacts/gesto-ai-1.0.0-arm64-v8a.apk
-          cp build/app/outputs/flutter-apk/app-x86_64-release.apk             $GITHUB_WORKSPACE/artifacts/gesto-ai-1.0.0-x86_64.apk
-          ls -lh $GITHUB_WORKSPACE/artifacts
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+          out="$GITHUB_WORKSPACE/artifacts"
+          cp build/app/outputs/flutter-apk/app-release.apk            "$out/gesto-ai-$VERSION-universal.apk"
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk "$out/gesto-ai-$VERSION-armeabi-v7a.apk"
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk   "$out/gesto-ai-$VERSION-arm64-v8a.apk"
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk      "$out/gesto-ai-$VERSION-x86_64.apk"
+          ls -lh "$out"
 
       - name: Verify APK signatures
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           echo "Using $BT"
-          for f in $GITHUB_WORKSPACE/artifacts/*.apk; do
+          for f in "$GITHUB_WORKSPACE"/artifacts/*.apk; do
             echo "=== $(basename "$f") ==="
             "$BT/apksigner" verify --print-certs "$f" | head -5
-            "$BT/aapt2" dump badging "$f" 2>/dev/null | head -4 || true
             echo "::notice::$(basename "$f") | $("$BT/aapt2" dump badging "$f" 2>/dev/null | grep -E '^(package|sdkVersion|targetSdkVersion)' | tr '\n' ' ')"
           done
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gesto-ai-apk
+          name: gesto-ai-apk-${{ steps.version.outputs.version }}-${{ github.run_number }}
           path: artifacts/*.apk
           if-no-files-found: error
           retention-days: 30
@@ -152,36 +164,38 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/android-v') || (github.event_name == 'workflow_dispatch' && inputs.make_release)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/android-v') && github.ref_name || format('android-v1.0.0-{0}', github.run_number) }}
-          name: Gesto AI for Android — v1.0.0 (build ${{ github.run_number }})
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/android-v') && github.ref_name || format('android-v{0}-{1}', steps.version.outputs.version, github.run_number) }}
+          name: Gesto AI for Android — v${{ steps.version.outputs.version }} (build ${{ github.run_number }})
           body: |
-            ## Gesto AI — Android APK
+            ## Gesto AI — Android APK v${{ steps.version.outputs.version }}
 
             Pakistan Sign Language → Urdu speech, on your phone.
 
             | File | Use it for |
             | --- | --- |
-            | `gesto-ai-1.0.0-universal.apk` | Any Android phone (safest choice) |
-            | `gesto-ai-1.0.0-arm64-v8a.apk` | Modern 64-bit phones (smaller download) |
-            | `gesto-ai-1.0.0-armeabi-v7a.apk` | Older 32-bit phones |
-            | `gesto-ai-1.0.0-x86_64.apk` | Emulators |
+            | `gesto-ai-${{ steps.version.outputs.version }}-arm64-v8a.apk` | Modern 64-bit phones (smallest download) |
+            | `gesto-ai-${{ steps.version.outputs.version }}-universal.apk` | Any Android phone (safest) |
+            | `gesto-ai-${{ steps.version.outputs.version }}-armeabi-v7a.apk` | Older 32-bit phones |
+            | `gesto-ai-${{ steps.version.outputs.version }}-x86_64.apk` | Emulators |
 
-            **Install:** enable "Install unknown apps" for your browser/file manager,
-            then open the APK. Android 7.0 or newer is required.
+            **Install:** allow "Install unknown apps" for your browser, then open the APK.
+            Android 7.0+ required.
 
-            The app talks to the Railway backend (`https://gesto-ai-production.up.railway.app`).
-            You can point it at any other server in **Settings → Backend server**.
+            **Backend address:** if the server is unreachable, open the app →
+            **Home → Server status → Change server** (or **Settings → Backend server**)
+            and enter a live endpoint, e.g. a fresh Railway deploy or
+            `http://<laptop-ip>:8000` on the same Wi-Fi.
           files: artifacts/*.apk
           fail_on_unmatched_files: true
 
       - name: Summary
         run: |
           {
-            echo "## Gesto AI APK"
+            echo "## Gesto AI APK v${{ steps.version.outputs.version }}"
             echo ""
             echo "| APK | Size |"
             echo "| --- | --- |"
-            for f in $GITHUB_WORKSPACE/artifacts/*.apk; do
+            for f in "$GITHUB_WORKSPACE"/artifacts/*.apk; do
               echo "| $(basename "$f") | $(du -h "$f" | cut -f1) |"
             done
           } >> "$GITHUB_STEP_SUMMARY"

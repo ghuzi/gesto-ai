@@ -14,8 +14,8 @@ class AppConfig {
       'https://gesto-ai-production.up.railway.app/docs';
   static const String repoUrl = 'https://github.com/ghuzi/gesto-ai';
 
-  static const String version = '1.0.0';
-  static const int buildNumber = 1;
+  static const String version = '1.0.1';
+  static const int buildNumber = 2;
 
   /// ~10 frames per second, matching the web frontend.
   static const int frameIntervalMs = 100;

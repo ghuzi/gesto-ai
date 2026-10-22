@@ -1,0 +1,101 @@
+name: Backend probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Backend base URL to probe'
+        default: 'https://gesto-ai-production.up.railway.app'
+
+concurrency:
+  group: backend-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe Railway backend
+        run: |
+          URL="${{ inputs.url || 'https://gesto-ai-production.up.railway.app' }}"
+          echo "=== DNS ==="
+          getent hosts gesto-ai-production.up.railway.app || echo "::error::DNS did not resolve"
+          echo "=== GET /health ==="
+          set +e
+          curl -sS -o /tmp/body -D /tmp/headers \
+            -w 'code=%{http_code} dns=%{time_namelookup} connect=%{time_connect} tls=%{time_appconnect} ttfb=%{time_starttransfer} total=%{time_total}\n' \
+            --max-time 120 --retry 1 "$URL/health" | tee /tmp/timing
+          echo "curl_exit=$?"
+          cat /tmp/timing
+          echo "--- headers ---"; head -30 /tmp/headers
+          echo "--- body (first 700 chars) ---"; head -c 700 /tmp/body; echo
+          echo "=== GET / ==="
+          curl -sS -o /tmp/root -w 'root_code=%{http_code} total=%{time_total}\n' --max-time 60 "$URL/" | tail -1
+          head -c 300 /tmp/root; echo
+          echo "=== WS upgrade attempt ==="
+          curl -sS -o /dev/null -w 'ws_code=%{http_code}\n' --max-time 30 \
+            -H "Connection: Upgrade" -H "Upgrade: websocket" \
+            -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+            "$URL/ws/predict"
+
+      - name: Report success or failure clearly
+        if: always()
+        run: |
+          code=$(grep -o 'code=[0-9]*' /tmp/timing | head -1 | cut -d= -f2)
+          case "$code" in
+            200) echo "::notice::Backend responded 200 OK" ;;
+            404) echo "::error::Backend missing: HTTP 404 — no service is deployed at this address" ;;
+            502|503|504) echo "::warning::Platform is up but the container is not ready (HTTP $code) — it may be starting" ;;
+            000|"") echo "::error::No response at all (DNS/TLS/timeout)" ;;
+            *) echo "::warning::Unexpected HTTP $code" ;;
+          esac
+
+      - name: (optional) inspect the Vercel frontend
+        if: always()
+        run: |
+          set +e
+          for f in script.js index.html; do
+            code=$(curl -sS -o "/tmp/vercel_$f" -w '%{http_code}' --max-time 45 "https://gesto-ai-frontend.vercel.app/$f")
+            echo "--- $f ($code) ---"
+            grep -oE '(wss?|https?)://[a-zA-Z0-9._-]+\.(railway\.app|onrender\.com|hf\.space|koyeb\.app|fly\.dev)[^"'"'"' ]*' "/tmp/vercel_$f" | sort -u | head -10
+          done
+          for host in gesto-ai.up.railway.app gesto-ai-backend.up.railway.app gesto-ai-api.up.railway.app; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "https://$host/health")
+            echo "::notice::CAND $host=$code"
+          done
+
+      - name: Report to annotations
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob
+
+          def load(path, limit=1400):
+              try:
+                  with open(path, encoding='utf-8', errors='replace') as fh:
+                      return fh.read()[:limit]
+              except OSError:
+                  return '<missing>'
+
+          timing = load('/tmp/timing', 400).replace('\n', ' ')
+          headers = load('/tmp/headers', 900)
+          body = load('/tmp/body', 700)
+          root = load('/tmp/root', 300)
+
+          def enc(text):
+              return text.replace('%', '%25').replace('\r', '').replace('\n', ' | ')
+
+          print(f'::notice::TIMING: {enc(timing)}')
+          print(f'::notice::HEADERS: {enc(headers)}')
+          print(f'::notice::BODY: {enc(body)}')
+          print(f'::notice::ROOT: {enc(root)}')
+          import re
+
+          with open('/tmp/vercel_script.js', encoding='utf-8', errors='replace') as fh:
+              js = fh.read()
+          for line in js.splitlines():
+              if 'WS_URL' in line or 'railway.app' in line or 'ws://' in line or 'wss://' in line:
+                  print('::notice::WS ' + enc(line.strip()[:300]))
+          hosts = re.findall(r'[a-z0-9-]+\.up\.railway\.app', js)
+          print('::notice::HOSTS ' + ','.join(sorted(set(hosts))))
+          PY

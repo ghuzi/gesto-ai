@@ -486,7 +486,29 @@ class _DemoScreenState extends State<DemoScreen> with WidgetsBindingObserver {
                   style: GText.bodySmall.copyWith(color: kDanger, fontSize: 11.5),
                 ),
               ),
-            if (app.health != null && !app.modelReady) ...<Widget>[
+            if (app.healthLoading && app.health == null) ...<Widget>[
+              const SizedBox(height: 12),
+              _Banner(
+                icon: Icons.hourglass_top_rounded,
+                color: kTeal,
+                text: l.wakingUp,
+              ),
+            ] else if (app.healthError != null) ...<Widget>[
+              const SizedBox(height: 12),
+              _Banner(
+                icon: Icons.cloud_off_rounded,
+                color: kDanger,
+                text: app.backendMissing
+                    ? l.backendMissingBody
+                    : '${l.serverOffline} · ${app.healthError!}',
+                actionLabel: l.changeServer,
+                onAction: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SettingsScreen(),
+                  ),
+                ),
+              ),
+            ] else if (app.health != null && !app.modelReady) ...<Widget>[
               const SizedBox(height: 12),
               _Banner(
                 icon: Icons.warning_amber_rounded,
@@ -1054,11 +1076,15 @@ class _Banner extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.text,
+    this.actionLabel,
+    this.onAction,
   });
 
   final IconData icon;
   final Color color;
   final String text;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -1070,17 +1096,41 @@ class _Banner extends StatelessWidget {
         border: Border.all(color: fade(color, 0.24)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(icon, color: color, size: 18),
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(icon, color: color, size: 18),
+          ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 12.5,
-                height: 1.4,
-                color: fade(kInk, 0.85),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.45,
+                    color: fade(kInk, 0.85),
+                  ),
+                ),
+                if (actionLabel != null && onAction != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: InkWell(
+                      onTap: onAction,
+                      child: Text(
+                        actionLabel!,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: fade(color, 0.95),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
@@ -1088,6 +1138,7 @@ class _Banner extends StatelessWidget {
     );
   }
 }
+
 
 class _SquareButton extends StatelessWidget {
   const _SquareButton({
