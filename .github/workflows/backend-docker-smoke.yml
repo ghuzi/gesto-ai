@@ -1,0 +1,60 @@
+name: Backend Docker smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/f2987663-gesto-ai, main]
+    paths:
+      - 'chat-1/gesto-ai/backend/Dockerfile'
+      - 'chat-1/gesto-ai/backend/requirements.txt'
+      - 'chat-1/gesto-ai/backend/railway.json'
+      - '.github/workflows/backend-docker-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  docker:
+    name: Build image and hit /health
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the backend image
+        working-directory: chat-1/gesto-ai/backend
+        run: |
+          set -o pipefail
+          docker build -t gesto-backend . 2>&1 | tail -25
+          docker image ls gesto-backend --format '::notice::image {{.Size}}'
+
+      - name: Run it the way Railway does (injected PORT)
+        run: |
+          docker run -d --name gesto -p 8080:8080 -e PORT=8080 gesto-backend
+          for i in $(seq 1 60); do
+            sleep 5
+            code=$(curl -s -o /tmp/health -w '%{http_code}' --max-time 5 http://localhost:8080/health || true)
+            echo "attempt $i -> $code"
+            [ "$code" = "200" ] && break
+            if [ "$(docker inspect -f '{{.State.Running}}' gesto)" != "true" ]; then
+              echo "::error::container exited"
+              docker logs gesto | tail -40
+              exit 1
+            fi
+          done
+          echo "=== /health ==="; cat /tmp/health; echo
+          echo "::notice::HEALTH $(head -c 1200 /tmp/health)"
+          echo "=== container logs (tail) ==="; docker logs gesto 2>&1 | tail -20
+          python3 - <<'PY'
+          import json
+          try:
+              with open('/tmp/health', encoding='utf-8', errors='replace') as fh:
+                  data = json.load(fh)
+          except Exception as exc:
+              print(f'::error::health check did not return JSON: {exc}')
+              raise SystemExit(1)
+          if not data.get('model_loaded'):
+              print('::error::models did not load in the container')
+              raise SystemExit(1)
+          print(f"::notice::model_loaded with {len(data.get('gesture_labels', []))} gesture classes on port 8080")
+          PY
