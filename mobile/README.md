@@ -8,7 +8,7 @@ Railway server.
 | | |
 | --- | --- |
 | Package | `ai.gesto.app` |
-| Min Android | 6.0 (API 23) |
+| Min Android | 7.0 (Flutter default) |
 | Built with | Flutter stable · Dart 3 · Material 3 |
 | Backend | `https://gesto-ai-production.up.railway.app` (configurable) |
 
@@ -46,7 +46,7 @@ flutter build apk --release            # build/app/outputs/flutter-apk/app-relea
 flutter build apk --release --split-per-abi   # smaller per-CPU APKs
 ```
 
-Requires Flutter stable (3.24+) and JDK 17. `flutter doctor` should show the
+Requires Flutter 3.47+ (pinned in CI) and JDK 17. `flutter doctor` should show the
 Android toolchain as ready.
 
 ### Release signing (optional)
