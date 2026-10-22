@@ -129,6 +129,17 @@ jobs:
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk             ../artifacts/gesto-ai-1.0.0-x86_64.apk
           ls -lh ../artifacts
 
+      - name: Verify APK signatures
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          echo "Using $BT"
+          for f in ../artifacts/*.apk; do
+            echo "=== $(basename "$f") ==="
+            "$BT/apksigner" verify --print-certs "$f" | head -5
+            "$BT/aapt2" dump badging "$f" 2>/dev/null | head -4 || true
+            echo "::notice::$(basename "$f") | $("$BT/aapt2" dump badging "$f" 2>/dev/null | grep -E '^(package|sdkVersion|targetSdkVersion)' | tr '\n' ' ')"
+          done
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
