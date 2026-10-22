@@ -43,8 +43,8 @@ jobs:
             grep -oE '(wss?|https?)://[a-zA-Z0-9._-]+\.(railway\.app|onrender\.com|hf\.space|koyeb\.app|fly\.dev)[^"'"'"' ]*' "/tmp/vercel_$f" | sort -u | head -10
           done
           for host in gesto-ai.up.railway.app gesto-ai-backend.up.railway.app gesto-ai-api.up.railway.app; do
-            echo -n "$host -> "
-            curl -sS -o /dev/null -w '%{http_code}\n' --max-time 15 "https://$host/health"
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "https://$host/health")
+            echo "::notice::CAND $host=$code"
           done
 
       - name: Report to annotations
@@ -72,7 +72,13 @@ jobs:
           print(f'::notice::HEADERS: {enc(headers)}')
           print(f'::notice::BODY: {enc(body)}')
           print(f'::notice::ROOT: {enc(root)}')
-          for name in ('script.js', 'index.html'):
-              text = load(f'/tmp/vercel_{name}', 400).replace('\n', ' ')
-              print(f'::notice::VERCEL {name}: {enc(text)}')
+          import re
+
+          with open('/tmp/vercel_script.js', encoding='utf-8', errors='replace') as fh:
+              js = fh.read()
+          for line in js.splitlines():
+              if 'WS_URL' in line or 'railway.app' in line or 'ws://' in line or 'wss://' in line:
+                  print('::notice::WS ' + enc(line.strip()[:300]))
+          hosts = re.findall(r'[a-z0-9-]+\.up\.railway\.app', js)
+          print('::notice::HOSTS ' + ','.join(sorted(set(hosts))))
           PY
