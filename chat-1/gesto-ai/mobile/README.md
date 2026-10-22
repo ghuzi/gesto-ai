@@ -14,8 +14,13 @@ Railway server.
 
 ## Download the APK
 
-**[⬇ Download the latest APK](https://github.com/ghuzi/gesto-ai/releases/latest)** →
-pick one file:
+**[⬇ Download the latest APK](https://github.com/ghuzi/gesto-ai/releases/latest)**
+
+Scan with your phone to open the download page:
+
+<img src="docs/apk-qr.png" alt="QR code to the Gesto AI APK releases" width="170" />
+
+Then pick one file:
 
 | File | Use it for |
 | --- | --- |
@@ -123,7 +128,7 @@ camera captured, matching the training pipeline.
 ## Project layout
 
 ```
-mobile/
+chat-1/gesto-ai/mobile/
 ├── lib/
 │   ├── app/          # theme, localisation (en/ur), AppState, config
 │   ├── data/         # gesture → Urdu / Devanagari maps, default labels
