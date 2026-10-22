@@ -75,6 +75,19 @@ class L10n {
   String get checking => _('Checking…', 'جانچ جاری ہے…');
   String get checkAgain => _('Check again', 'دوبارہ جانچیں');
   String gesturesAvailable(int n) => isUrdu ? '$n اشارے دستیاب' : '$n gestures available';
+  String get backendMissingTitle => _('Backend not deployed', 'بیک اینڈ تعینات نہیں');
+  String get backendMissingBody => _(
+        'This address answers, but no Gesto AI backend lives there. Deploy the backend or point the app at a running server.',
+        'یہ پتہ جواب دے رہا ہے مگر وہاں گسٹو اے آئی بیک اینڈ موجود نہیں۔ بیک اینڈ تعینات کریں یا ایپ کو چلتے سرور سے جوڑیں۔',
+      );
+  String get offlineBody => _(
+        'The app could not reach the server. Check your internet, or change the server address.',
+        'ایپ سرور تک نہیں پہنچ سکی۔ انٹرنیٹ چیک کریں یا سرور کا پتہ بدلیں۔',
+      );
+  String get changeServer => _('Change server', 'سرور بدلیں');
+  String get autoRetryHint => _('Retrying automatically…', 'خود بخود دوبارہ کوشش جاری…');
+  String get wakingUp => _('Waking up the server…', 'سرور کو بیدار کیا جا رہا ہے…');
+  String get serverDetail => _('Details', 'تفصیل');
   String get footerNote => _('Hackathon build. Every sign deserves a voice.', 'ہیکاتھون پروجیکٹ۔ ہر اشارے کی ایک آواز ہونی چاہیے۔');
 
   // ----------------------------------------------------------------- demo

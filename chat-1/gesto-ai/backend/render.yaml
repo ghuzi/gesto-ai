@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: gesto-ai-backend
+    runtime: docker
+    plan: starter          # free tier spins down after 15 min idle
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DASHSCOPE_API_KEY
+        sync: false        # optional: sentence generation (falls back to Urdu defaults)
+      - key: DASHSCOPE_BASE_URL
+        sync: false

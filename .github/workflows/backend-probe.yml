@@ -1,10 +1,15 @@
 name: Backend probe
 
 on:
-  push:
-    branches: [arena/f2987663-gesto-ai]
-    paths: ['.github/workflows/backend-probe.yml']
   workflow_dispatch:
+    inputs:
+      url:
+        description: 'Backend base URL to probe'
+        default: 'https://gesto-ai-production.up.railway.app'
+
+concurrency:
+  group: backend-probe
+  cancel-in-progress: true
 
 jobs:
   probe:
@@ -12,7 +17,7 @@ jobs:
     steps:
       - name: Probe Railway backend
         run: |
-          URL="https://gesto-ai-production.up.railway.app"
+          URL="${{ inputs.url || 'https://gesto-ai-production.up.railway.app' }}"
           echo "=== DNS ==="
           getent hosts gesto-ai-production.up.railway.app || echo "::error::DNS did not resolve"
           echo "=== GET /health ==="
@@ -33,7 +38,19 @@ jobs:
             -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
             "$URL/ws/predict"
 
-      - name: Probe Vercel frontend for the current backend URL
+      - name: Report success or failure clearly
+        if: always()
+        run: |
+          code=$(grep -o 'code=[0-9]*' /tmp/timing | head -1 | cut -d= -f2)
+          case "$code" in
+            200) echo "::notice::Backend responded 200 OK" ;;
+            404) echo "::error::Backend missing: HTTP 404 — no service is deployed at this address" ;;
+            502|503|504) echo "::warning::Platform is up but the container is not ready (HTTP $code) — it may be starting" ;;
+            000|"") echo "::error::No response at all (DNS/TLS/timeout)" ;;
+            *) echo "::warning::Unexpected HTTP $code" ;;
+          esac
+
+      - name: (optional) inspect the Vercel frontend
         if: always()
         run: |
           set +e

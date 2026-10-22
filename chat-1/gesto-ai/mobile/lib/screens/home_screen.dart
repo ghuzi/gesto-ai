@@ -356,84 +356,206 @@ class _ServerStatusCard extends StatelessWidget {
   final AppState app;
   final L10n l;
 
+  void _openSettings(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool ready = app.modelReady;
     final bool loading = app.healthLoading;
     final bool online = app.serverReachable;
+    final bool missing = app.backendMissing;
+
     final Color tint = ready ? kTeal : (online ? kAmber : kDanger);
-    final String text = loading
+    final String title = loading
         ? l.checking
         : ready
-            ? '${l.modelReady} · ${l.gesturesAvailable(app.gestureLabels.length)}'
+            ? l.modelReady
             : online
                 ? l.modelNotReady
-                : l.serverOffline;
+                : (missing ? l.backendMissingTitle : l.serverOffline);
+
+    final String? detail = loading
+        ? null
+        : (ready
+            ? l.gesturesAvailable(app.gestureLabels.length)
+            : online
+                ? l.serverNotReadyBanner
+                : (missing
+                    ? l.backendMissingBody
+                    : (app.healthError ?? l.offlineBody)));
 
     return SectionCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+      onTap: () => _openSettings(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: fade(tint, 0.12),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: loading
-                ? Padding(
-                    padding: const EdgeInsets.all(11),
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      valueColor: AlwaysStoppedAnimation<Color>(tint),
+          Row(
+            children: <Widget>[
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: fade(tint, 0.12),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: loading
+                    ? Padding(
+                        padding: const EdgeInsets.all(11),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          valueColor: AlwaysStoppedAnimation<Color>(tint),
+                        ),
+                      )
+                    : Icon(
+                        ready
+                            ? Icons.cloud_done_rounded
+                            : (online
+                                ? Icons.warning_amber_rounded
+                                : (missing
+                                    ? Icons.dns_rounded
+                                    : Icons.cloud_off_rounded)),
+                        color: tint,
+                        size: 21,
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      l.serverStatus.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.9,
+                        color: kInkSoft,
+                      ),
                     ),
-                  )
-                : Icon(
-                    ready
-                        ? Icons.cloud_done_rounded
-                        : (online
-                            ? Icons.warning_amber_rounded
-                            : Icons.cloud_off_rounded),
-                    color: tint,
-                    size: 21,
+                    const SizedBox(height: 2),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GText.h3.copyWith(fontSize: 14.5, color: kInk),
+                    ),
+                  ],
+                ),
+              ),
+              if (!online && !loading)
+                TextButton(
+                  onPressed: () => _openSettings(context),
+                  style: TextButton.styleFrom(
+                    foregroundColor: kTealDeep,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    minimumSize: const Size(0, 32),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
+                  child: Text(l.changeServer),
+                )
+              else
+                TextButton(
+                  onPressed: loading ? null : () => app.refreshHealth(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: kTealDeep,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    minimumSize: const Size(0, 32),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  child: Text(l.checkAgain),
+                ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (detail != null) ...<Widget>[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+              decoration: BoxDecoration(
+                color: fade(tint, online ? 0.07 : 0.06),
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: fade(tint, 0.18)),
+              ),
+              child: Text(
+                detail,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  height: 1.45,
+                  color: fade(kInk, 0.82),
+                ),
+              ),
+            ),
+          ],
+          if (!online && !loading) ...<Widget>[
+            const SizedBox(height: 8),
+            Row(
               children: <Widget>[
-                Text(
-                  l.serverStatus,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                    color: kInkSoft,
+                SizedBox(
+                  width: 11,
+                  height: 11,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.8,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      fade(kInkSoft, 0.7),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(width: 7),
                 Text(
-                  text,
-                  maxLines: 2,
+                  l.autoRetryHint,
+                  style: GText.bodySmall.copyWith(fontSize: 11),
+                ),
+                const Spacer(),
+                Text(
+                  app.baseUrl,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GText.h3.copyWith(fontSize: 13.5),
+                  style: GText.mono.copyWith(fontSize: 9.5),
                 ),
               ],
             ),
-          ),
-          TextButton(
-            onPressed: loading ? null : () => app.refreshHealth(),
-            style: TextButton.styleFrom(
-              foregroundColor: kTealDeep,
-              textStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
+          ],
+          if (online && ready) ...<Widget>[
+            const SizedBox(height: 8),
+            Row(
+              children: <Widget>[
+                Text(
+                  app.baseUrl,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GText.mono.copyWith(fontSize: 9.5),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: loading ? null : () => app.refreshHealth(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: kTealDeep,
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 26),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  child: Text(l.checkAgain),
+                ),
+              ],
             ),
-            child: Text(l.checkAgain),
-          ),
+          ],
         ],
       ),
     );
