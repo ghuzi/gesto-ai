@@ -7,7 +7,8 @@ on:
     paths:
       - 'chat-1/gesto-ai/backend/Dockerfile'
       - 'chat-1/gesto-ai/backend/requirements.txt'
-      - 'chat-1/gesto-ai/backend/railway.json'
+      - 'chat-1/gesto-ai/backend/main.py'
+      - 'chat-1/gesto-ai/backend/sentence_gen.py'
       - '.github/workflows/backend-docker-smoke.yml'
 
 permissions:
@@ -24,52 +25,61 @@ jobs:
       - name: Build the backend image
         working-directory: chat-1/gesto-ai/backend
         run: |
-          set -o pipefail
-          docker build -t gesto-backend . 2>&1 | tail -25
-          docker image ls gesto-backend --format '::notice::image {{.Size}}'
+          docker build -t gesto-backend . > /tmp/build.log 2>&1
+          tail -12 /tmp/build.log
+          docker image ls gesto-backend --format 'image {{.Size}}'
 
-      - name: Run it the way Railway does (injected PORT)
+      - name: Run the container with an injected PORT
         run: |
-          docker run -d --name gesto -p 8080:8080 -e PORT=8080 gesto-backend
-          for i in $(seq 1 60); do
+          set +e
+          docker rm -f gesto >/dev/null 2>&1
+          docker run -d --name gesto -p 8080:8080 -e PORT=8080 gesto-backend > /tmp/run.log 2>&1
+          for i in $(seq 1 40); do
             sleep 5
-            code=$(curl -s -o /tmp/health -w '%{http_code}' --max-time 5 http://localhost:8080/health || true)
+            code=$(curl -s -o /tmp/health -w '%{http_code}' --max-time 5 http://localhost:8080/health)
             echo "attempt $i -> $code"
-            [ "$code" = "200" ] && break
-            if [ "$(docker inspect -f '{{.State.Running}}' gesto)" != "true" ]; then
+            if [ "$code" = "200" ]; then break; fi
+            if [ "$(docker inspect -f '{{.State.Running}}' gesto 2>/dev/null)" != "true" ]; then
               echo "container exited"
-              docker logs gesto > /tmp/clogs 2>&1 || true
-              python3 - <<'PY'
-              with open('/tmp/clogs', encoding='utf-8', errors='replace') as fh:
-                  lines = fh.read().splitlines()
-              for line in lines[-25:]:
-                  text = line.replace('%', '%25').replace('\r', '').replace('\n', '%0A')
-                  if text.strip():
-                      print('::error::' + text[:900])
-              PY
-              exit 1
+              break
             fi
           done
-          echo "=== /health ==="; cat /tmp/health; echo
-          echo "::notice::HEALTH $(head -c 1200 /tmp/health)"
-          echo "=== container logs (tail) ==="; docker logs gesto 2>&1 | tail -20
-          docker logs gesto > /tmp/clogs 2>&1 || true
-          python3 - <<'PY'
-          with open('/tmp/clogs', encoding='utf-8', errors='replace') as fh:
-              lines = fh.read().splitlines()
-          for line in lines[-12:]:
-              print('::warning::' + line.replace('%', '%25')[:400])
-          PY
+          echo "--- /health body ---"
+          head -c 900 /tmp/health
+          docker logs gesto > /tmp/clogs 2>&1
+          echo "--- container logs (tail) ---"
+          tail -20 /tmp/clogs
+
+      - name: Judge the result
+        run: |
           python3 - <<'PY'
           import json
+          import pathlib
+
+          def lines(path):
+              try:
+                  return pathlib.Path(path).read_text(encoding='utf-8', errors='replace').splitlines()
+              except OSError:
+                  return []
+
+          logs = lines('/tmp/clogs')
+          for line in logs[-18:]:
+              text = line.replace('%', '%25').strip()
+              if text:
+                  print('::warning::' + text[:700])
+
           try:
-              with open('/tmp/health', encoding='utf-8', errors='replace') as fh:
-                  data = json.load(fh)
-          except Exception as exc:
-              print(f'::error::health check did not return JSON: {exc}')
+              health = json.loads(pathlib.Path('/tmp/health').read_text(encoding='utf-8'))
+          except Exception:
+              for line in lines('/tmp/clogs')[-12:]:
+                  print('::error::' + line.replace('%', '%25').strip()[:800])
+              print('::error::/health never returned JSON — container crashed or never bound PORT')
               raise SystemExit(1)
-          if not data.get('model_loaded'):
-              print('::error::models did not load in the container')
+
+          if not health.get('model_loaded'):
+              print('::error::/health returned model_loaded=false')
               raise SystemExit(1)
-          print(f"::notice::model_loaded with {len(data.get('gesture_labels', []))} gesture classes on port 8080")
+
+          labels = health.get('gesture_labels', [])
+          print(f"::notice::OK: model_loaded=true, {len(labels)} gesture classes, PORT honoured")
           PY
