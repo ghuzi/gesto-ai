@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main, arena/f2987663-gesto-ai]
+    branches: [main, 'arena/**']
     tags: ['android-v*']
     paths:
       - 'chat-1/gesto-ai/mobile/**'
