@@ -55,6 +55,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Template diagnostics
+        run: |
+          flutter create --platforms=android --org ai.gesto --project-name gesto_ai "$RUNNER_TEMP/diag" >/dev/null
+          for f in settings.gradle.kts build.gradle.kts app/build.gradle.kts gradle/wrapper/gradle-wrapper.properties gradle.properties; do
+            echo "::notice::TPL:$f:$(base64 -w0 "$RUNNER_TEMP/diag/android/$f")"
+          done
+          echo "::notice::FLUTTER:$(flutter --version | tr '\n' ' ')"
+
       - name: Align Android tooling with the Flutter template
         run: |
           flutter create --platforms=android --org ai.gesto --project-name gesto_ai "$RUNNER_TEMP/tpl" >/dev/null
