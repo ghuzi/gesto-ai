@@ -1,0 +1,39 @@
+name: gesto_ai
+description: "Gesto AI — real-time Pakistan Sign Language (PSL) to Urdu speech, on Android."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+  flutter: '>=3.24.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Camera preview + raw frame stream (JPEG) for the inference WebSocket.
+  camera: ^0.11.0+2
+  # Runtime camera permission with an "open settings" fallback.
+  permission_handler: ^11.3.1
+  # Frames are streamed to the Railway backend over a WebSocket.
+  web_socket_channel: ^3.0.1
+  # GET /health (model status + gesture labels).
+  http: ^1.2.2
+  # Urdu speech output (falls back to a Hindi voice when no Urdu TTS exists).
+  flutter_tts: ^4.2.0
+  # Settings + gesture history persistence.
+  shared_preferences: ^2.3.2
+  # Opening the web demo / backend docs from the About screen.
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/team/

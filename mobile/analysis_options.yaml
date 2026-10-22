@@ -1,0 +1,10 @@
+include: package:flutter_lints/flutter_lints.yaml
+
+analyzer:
+  errors:
+    # Keep the build green on informational lints across Flutter versions.
+    deprecated_member_use: ignore
+
+linter:
+  rules:
+    prefer_single_quotes: true

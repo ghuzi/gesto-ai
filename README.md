@@ -6,6 +6,7 @@ Real-time Pakistan Sign Language (PSL) → Urdu speech. The backend captures han
 
 **Live demo:** https://gesto-ai-frontend.vercel.app
 **Backend API:** https://gesto-ai-production.up.railway.app
+**Android APK:** https://github.com/ghuzi/gesto-ai/releases/latest — see [mobile/README.md](chat-1/gesto-ai/mobile/README.md)
 
 ## Repository layout
 
@@ -15,9 +16,23 @@ gesto-ai/
 │   ├── main.py              # FastAPI + WebSocket prediction server
 │   ├── requirements.txt
 │   └── models/              # ← copy model files here manually (see below)
-└── frontend/
-    └── index.html           # static frontend (camera + Urdu speech)
+├── frontend/
+│   └── index.html           # static frontend (camera + Urdu speech)
+└── mobile/                  # Flutter Android app (camera + Urdu speech)
+    ├── lib/
+    └── android/
 ```
+
+## Android app
+
+`chat-1/gesto-ai/mobile/` is a native Flutter client for the same backend and
+the same WebSocket protocol: live camera demo, Urdu speech, saved gesture
+history, English/Urdu UI and a configurable server address.
+
+* Build: `.github/workflows/mobile-apk.yml` (Actions → **Build Android APK**).
+  Manually run it with `make_release` to publish a download link under **Releases**.
+* Locally: `cd chat-1/gesto-ai/mobile && flutter build apk --release`.
+* Full instructions, signing and troubleshooting: [mobile/README.md](chat-1/gesto-ai/mobile/README.md).
 
 ## Backend setup & run
 
