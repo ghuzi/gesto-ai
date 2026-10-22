@@ -6,7 +6,7 @@ Real-time Pakistan Sign Language (PSL) → Urdu speech. The backend captures han
 
 **Live demo:** https://gesto-ai-frontend.vercel.app
 **Backend API:** https://gesto-ai-production.up.railway.app
-**Android app (APK):** built by GitHub Actions — see [mobile/README.md](chat-1/gesto-ai/mobile/README.md) or the repo's **Releases** page
+**Android APK:** https://github.com/ghuzi/gesto-ai/releases/latest — see [mobile/README.md](chat-1/gesto-ai/mobile/README.md)
 
 ## Repository layout
 
