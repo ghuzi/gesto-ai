@@ -416,12 +416,15 @@ a { color: inherit; text-decoration: none; }
 .demo__conn {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.55rem;
   margin-top: 0.9rem;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--ink-soft);
 }
+
+#conn-text { flex: 1 1 12rem; }
 
 .conn-dot {
   width: 10px;
@@ -443,6 +446,7 @@ a { color: inherit; text-decoration: none; }
 
 .conn-retry {
   margin-left: auto;
+  white-space: nowrap;
   font: inherit;
   font-weight: 700;
   font-size: 0.8rem;
@@ -456,6 +460,12 @@ a { color: inherit; text-decoration: none; }
 }
 
 .conn-retry:hover { background: rgba(13, 148, 136, 0.22); }
+
+#change-server-btn {
+  margin-left: 0.35rem;
+  background: rgba(15, 118, 110, 0.08);
+  border: 1px solid rgba(15, 118, 110, 0.25);
+}
 
 /* Results panel */
 .results__label {

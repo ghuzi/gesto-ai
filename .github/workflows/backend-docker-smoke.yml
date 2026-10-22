@@ -3,7 +3,7 @@ name: Backend Docker smoke test
 on:
   workflow_dispatch:
   push:
-    branches: [arena/f2987663-gesto-ai, main]
+    branches: [main, 'arena/**']
     paths:
       - 'chat-1/gesto-ai/backend/Dockerfile'
       - 'chat-1/gesto-ai/backend/requirements.txt'

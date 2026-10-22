@@ -2,6 +2,10 @@ name: Backend probe
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'chat-1/gesto-ai/frontend/**'
     inputs:
       url:
         description: 'Backend base URL to probe'
@@ -50,15 +54,19 @@ jobs:
             *) echo "::warning::Unexpected HTTP $code" ;;
           esac
 
-      - name: (optional) inspect the Vercel frontend
+      - name: Inspect the deployed Vercel frontend
         if: always()
         run: |
           set +e
           for f in script.js index.html; do
             code=$(curl -sS -o "/tmp/vercel_$f" -w '%{http_code}' --max-time 45 "https://gesto-ai-frontend.vercel.app/$f")
             echo "--- $f ($code) ---"
-            grep -oE '(wss?|https?)://[a-zA-Z0-9._-]+\.(railway\.app|onrender\.com|hf\.space|koyeb\.app|fly\.dev)[^"'"'"' ]*' "/tmp/vercel_$f" | sort -u | head -10
           done
+          if grep -q 'change-server-btn' /tmp/vercel_index.html; then
+            echo "::notice::FRONTEND deployed with runtime backend switching (v1.0.1 fix present)"
+          else
+            echo "::warning::FRONTEND is still the old build — Vercel may still be deploying"
+          fi
           for host in gesto-ai.up.railway.app gesto-ai-backend.up.railway.app gesto-ai-api.up.railway.app; do
             code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "https://$host/health")
             echo "::notice::CAND $host=$code"
