@@ -81,6 +81,22 @@ the Android manifest allows cleartext traffic.
   `flutter build apk --dart-define=GESTO_API_BASE=https://your-new-host`
 * **Web frontend:** `chat-1/gesto-ai/frontend/script.js` → `WS_URL`, then redeploy Vercel.
 
+## Why a fresh deploy used to crash
+
+`sentence_gen.py` built the Qwen client at **import time**:
+
+```python
+client = OpenAI(api_key=os.getenv("DASHSCOPE_API_KEY"), ...)   # raises when the key is unset
+```
+
+Without `DASHSCOPE_*` variables the import threw, uvicorn exited before binding
+a port, and the platform restarted the container forever (502/503 from outside,
+"deployment failed" in the dashboard). The client is now created lazily and the
+built-in Urdu sentences are used when Qwen is not configured, so **a deploy with
+zero environment variables now works**. Verified with the
+`.github/workflows/backend-docker-smoke.yml` job: image builds, container boots
+with an injected `PORT`, `/health` reports `model_loaded: true` and 14 gestures.
+
 ## Notes
 
 * The Dockerfile now honours the platform's `$PORT`
