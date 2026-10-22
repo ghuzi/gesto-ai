@@ -1,0 +1,61 @@
+name: Backend probe
+
+on:
+  push:
+    branches: [arena/f2987663-gesto-ai]
+    paths: ['.github/workflows/backend-probe.yml']
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe Railway backend
+        run: |
+          URL="https://gesto-ai-production.up.railway.app"
+          echo "=== DNS ==="
+          getent hosts gesto-ai-production.up.railway.app || echo "::error::DNS did not resolve"
+          echo "=== GET /health ==="
+          set +e
+          curl -sS -o /tmp/body -D /tmp/headers \
+            -w 'code=%{http_code} dns=%{time_namelookup} connect=%{time_connect} tls=%{time_appconnect} ttfb=%{time_starttransfer} total=%{time_total}\n' \
+            --max-time 120 --retry 1 "$URL/health" | tee /tmp/timing
+          echo "curl_exit=$?"
+          cat /tmp/timing
+          echo "--- headers ---"; head -30 /tmp/headers
+          echo "--- body (first 700 chars) ---"; head -c 700 /tmp/body; echo
+          echo "=== GET / ==="
+          curl -sS -o /tmp/root -w 'root_code=%{http_code} total=%{time_total}\n' --max-time 60 "$URL/" | tail -1
+          head -c 300 /tmp/root; echo
+          echo "=== WS upgrade attempt ==="
+          curl -sS -o /dev/null -w 'ws_code=%{http_code}\n' --max-time 30 \
+            -H "Connection: Upgrade" -H "Upgrade: websocket" \
+            -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+            "$URL/ws/predict"
+
+      - name: Report to annotations
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob
+
+          def load(path, limit=1400):
+              try:
+                  with open(path, encoding='utf-8', errors='replace') as fh:
+                      return fh.read()[:limit]
+              except OSError:
+                  return '<missing>'
+
+          timing = load('/tmp/timing', 400).replace('\n', ' ')
+          headers = load('/tmp/headers', 900)
+          body = load('/tmp/body', 700)
+          root = load('/tmp/root', 300)
+
+          def enc(text):
+              return text.replace('%', '%25').replace('\r', '').replace('\n', ' | ')
+
+          print(f'::notice::TIMING: {enc(timing)}')
+          print(f'::notice::HEADERS: {enc(headers)}')
+          print(f'::notice::BODY: {enc(body)}')
+          print(f'::notice::ROOT: {enc(root)}')
+          PY
