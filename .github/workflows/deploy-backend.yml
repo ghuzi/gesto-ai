@@ -1,0 +1,115 @@
+name: Deploy backend
+
+# Redeploys chat-1/gesto-ai/backend to Railway from GitHub and then verifies
+# /health. Needs ONE repository secret, created by you (never pasted in chat):
+#
+#   Settings → Secrets and variables → Actions → New repository secret
+#     RAILWAY_TOKEN   ← railway.app → Account Settings → Tokens → Create token
+#
+# Optional repository variables (Settings → Variables):
+#     RAILWAY_SERVICE      service name in the Railway project (e.g. gesto-ai)
+#     GESTO_API_BASE       public backend URL, used by the APK build + this probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend_url:
+        description: 'Public backend URL to verify after deploy (optional)'
+        required: false
+      wait_seconds:
+        description: 'How long to wait for /health to become ready'
+        default: '420'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Railway deploy + health check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check credentials
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "::error::RAILWAY_TOKEN secret is missing. Add it in Settings → Secrets and variables → Actions."
+            echo "::notice::Alternative without any token: Railway dashboard → New Project → Deploy from GitHub repo → root directory chat-1/gesto-ai/backend"
+            exit 1
+          fi
+          echo "::notice::RAILWAY_TOKEN present"
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: railway up
+        working-directory: chat-1/gesto-ai/backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          SERVICE: ${{ vars.RAILWAY_SERVICE }}
+        run: |
+          set -e
+          railway --version
+          if [ -n "$SERVICE" ]; then
+            railway up --service "$SERVICE" --detach --ci
+          else
+            railway up --detach --ci
+          fi
+          echo "::notice::Deploy triggered — the image build takes 5-10 minutes (TensorFlow + MediaPipe)"
+
+      - name: Verify /health
+        env:
+          URL: ${{ inputs.backend_url || vars.GESTO_API_BASE }}
+          WAIT_SECONDS: ${{ inputs.wait_seconds }}
+        run: |
+          set +e
+          if [ -z "$URL" ]; then
+            echo "::warning::No backend_url input and no GESTO_API_BASE variable — skipping the health check."
+            echo "::notice::Add the public URL as a repository variable GESTO_API_BASE to verify deploys automatically."
+            exit 0
+          fi
+          echo "Waiting for $URL/health (up to ${WAIT_SECONDS}s)"
+          deadline=$(( $(date +%s) + WAIT_SECONDS ))
+          body=""
+          code=""
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            code=$(curl -s -o /tmp/h -w '%{http_code}' --max-time 20 "$URL/health")
+            body=$(head -c 600 /tmp/h)
+            echo "$(date +%H:%M:%S) -> $code ${body:0:160}"
+            [ "$code" = "200" ] && break
+            sleep 20
+          done
+
+          if [ "$code" != "200" ]; then
+            echo "::error::Backend did not become healthy (last HTTP $code)"
+            exit 1
+          fi
+
+          python3 - "$URL" <<'PY'
+          import json
+          import sys
+
+          with open('/tmp/h', encoding='utf-8', errors='replace') as fh:
+              data = json.load(fh)
+          url = sys.argv[1]
+          if not data.get('model_loaded'):
+              print('::error::Server is up but model_loaded=false — model files missing in the image')
+              raise SystemExit(1)
+          print(f"::notice::LIVE {url} — model_loaded=true, {len(data.get('gesture_labels', []))} gestures")
+          PY
+
+      - name: Tell the app and the web page where the backend is
+        if: success()
+        env:
+          URL: ${{ inputs.backend_url || vars.GESTO_API_BASE }}
+        run: |
+          echo "::notice::App: Home → Server status → Change server → $URL"
+          echo "::notice::Web: https://gesto-ai-frontend.vercel.app/?backend=$URL"
+          echo "::notice::Permanent web URL: set the same value locally (it is stored in the browser)"

@@ -121,6 +121,10 @@ flutter build apk --dart-define=GESTO_API_BASE=http://192.168.1.10:8000
 
 or at runtime: **Settings → Backend server → Test connection → Save**.
 
+For CI builds, set the repository variable `GESTO_API_BASE` (Settings → Secrets
+and variables → Actions → Variables) — `Build Android APK` passes it as
+`--dart-define`, so every new APK already points at the right server.
+
 For plain `http://` (LAN demos) the manifest already enables cleartext traffic.
 
 ## Protocol (unchanged from the web client)

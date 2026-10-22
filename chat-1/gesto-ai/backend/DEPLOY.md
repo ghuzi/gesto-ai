@@ -23,6 +23,22 @@ https://<your-backend-host>/health
 > `404 Application not found` — that service is gone. Everything below
 > recreates it.
 
+## Option 0 — redeploy from GitHub Actions (no laptop needed)
+
+1. Railway → **Account Settings → Tokens → Create token** (project token is fine).
+2. GitHub repo → **Settings → Secrets and variables → Actions** →
+   **New repository secret** → name `RAILWAY_TOKEN`, value = that token.
+   *(Add it here, never in a chat/issue — and revoke any token that was shared.)*
+3. Optional but recommended, same page → **Variables**:
+   * `RAILWAY_SERVICE` = `gesto-ai`
+   * `GESTO_API_BASE` = your public backend URL
+4. **Actions → Deploy backend → Run workflow.**
+   It runs `railway up`, then polls `<GESTO_API_BASE>/health` until
+   `model_loaded: true` (up to 7 minutes) and prints the exact URLs to use.
+
+Once `GESTO_API_BASE` is set, the **Build Android APK** workflow bakes that URL
+into new APKs automatically, so a fresh install works without any setup.
+
 ## Option A — Railway (same host as before)
 
 ### In the browser
@@ -72,6 +88,21 @@ app: **Home → Server status → Change server** →
 `http://192.168.1.10:8000` → **Test connection** → **Save**.
 Phone and laptop must be on the same Wi-Fi. Plain `http://` already works —
 the Android manifest allows cleartext traffic.
+
+## Point the web page at the new server (no rebuild)
+
+The frontend resolves its backend at runtime:
+
+| Method | Example |
+| --- | --- |
+| Query string (also saved for next visits) | `https://gesto-ai-frontend.vercel.app/?backend=https://my-gesto.up.railway.app` |
+| **Change server** button under the connection status | prompts for a URL, saves it in `localStorage` |
+| `localStorage.setItem('gesto.backend', 'https://…')` in the console | for scripted demos |
+
+Accepted forms: `https://host`, `http://host`, `wss://host`, `ws://host`,
+`host:port`. Local/LAN addresses (`localhost:8000`, `192.168.x.x:8000`) are
+automatically treated as `http://`. It also explains *why* it is disconnected —
+`404` = nothing deployed at that address, `502/503` = starting, timeout = offline.
 
 ## Point the app (and the web page) at the new server
 

@@ -8,10 +8,86 @@
 'use strict';
 
 /* ---------- Configuration ---------- */
-const WS_URL = 'wss://gesto-ai-production.up.railway.app/ws/predict';
+const DEFAULT_BACKEND = 'https://gesto-ai-production.up.railway.app';
+const BACKEND_STORAGE_KEY = 'gesto.backend';
 const FRAME_INTERVAL_MS = 100;   // ~10 fps to the inference server
 const HISTORY_CAP = 8;           // max entries in the recent-gestures list
 const RECONNECT_DELAY_MS = 3000; // auto-retry backoff
+
+/* --------------------------------------------------------------------------
+   BACKEND ADDRESS — resolved at runtime, no rebuild required.
+   Priority:  ?backend=<url>  >  localStorage  >  DEFAULT_BACKEND
+   Accepted forms: https://host, http://host, wss://host, ws://host, host:port
+   -------------------------------------------------------------------------- */
+
+/** Local hosts are plain http (a laptop on the same Wi-Fi has no TLS). */
+function looksLocal(value) {
+  const host = value.split('/')[0].toLowerCase();
+  const hostname = host.split(':')[0];
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') return true;
+  if (/^10\./.test(hostname) || /^192\.168\./.test(hostname)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true;
+  // "192.168.1.10:8000" / "my-laptop:8000" — an explicit port means a dev server.
+  return /:\d+$/.test(host) && !hostname.includes('.');
+}
+
+/** Turn whatever the user typed into a clean https?:// base URL (no trailing /). */
+function normalizeBackend(raw) {
+  let value = String(raw || '').trim();
+  if (!value) return DEFAULT_BACKEND;
+  // ws(s):// is the same host as http(s):// — accept both when configuring.
+  value = value.replace(/^wss:\/\//i, 'https://').replace(/^ws:\/\//i, 'http://');
+  if (!/^https?:\/\//i.test(value)) {
+    value = (looksLocal(value) ? 'http://' : 'https://') + value;
+  }
+  try {
+    const url = new URL(value);
+    if (!url.hostname) return DEFAULT_BACKEND;
+    return url.origin + url.pathname.replace(/\/+$/, '');
+  } catch (err) {
+    return DEFAULT_BACKEND;
+  }
+}
+
+function resolveBackend() {
+  try {
+    const fromQuery = new URLSearchParams(window.location.search).get('backend');
+    if (fromQuery) {
+      const normalized = normalizeBackend(fromQuery);
+      localStorage.setItem(BACKEND_STORAGE_KEY, normalized);
+      return normalized;
+    }
+    const stored = localStorage.getItem(BACKEND_STORAGE_KEY);
+    if (stored) return normalizeBackend(stored);
+  } catch (err) {
+    // Private mode / storage disabled — fall through to the default.
+  }
+  return DEFAULT_BACKEND;
+}
+
+let BACKEND_URL = resolveBackend();
+let WS_URL = BACKEND_URL.replace(/^http/i, 'ws') + '/ws/predict';
+
+/** Ask for a new backend, persist it and reconnect. */
+function promptForBackend() {
+  const current = BACKEND_URL;
+  const answer = window.prompt(
+    'Backend server URL\n(e.g. https://my-gesto.up.railway.app or http://192.168.1.10:8000)',
+    current
+  );
+  if (answer === null) return;
+  const normalized = normalizeBackend(answer);
+  try {
+    localStorage.setItem(BACKEND_STORAGE_KEY, normalized);
+  } catch (err) {
+    // Storage unavailable — the URL still applies for this page view.
+  }
+  BACKEND_URL = normalized;
+  WS_URL = BACKEND_URL.replace(/^http/i, 'ws') + '/ws/predict';
+  setConnection('disconnected');
+  connectWebSocket();
+  checkBackendHealth();
+}
 
 /* ---------- DOM references ---------- */
 const video = document.getElementById('webcam');
@@ -24,6 +100,7 @@ const scanline = document.getElementById('scanline');
 const connDot = document.getElementById('conn-dot');
 const connText = document.getElementById('conn-text');
 const reconnectBtn = document.getElementById('reconnect-btn');
+const changeServerBtn = document.getElementById('change-server-btn');
 
 const gestureEl = document.getElementById('gesture-name');
 const statusEl = document.getElementById('status-line');
@@ -174,6 +251,9 @@ function connectWebSocket() {
   ws.onclose = () => {
     setConnection('disconnected');
     stopCaptureLoop();
+    // Re-diagnose so the user sees *why* (404 / starting / offline) instead
+    // of a generic "Server disconnected".
+    checkBackendHealth();
     // Auto-retry only while the demo is actually running.
     if (demoActive) {
       reconnectTimer = setTimeout(connectWebSocket, RECONNECT_DELAY_MS);
@@ -306,6 +386,7 @@ function addToHistory(name, pct) {
 function setConnection(state) {
   connDot.className = 'conn-dot'; // reset modifier classes
   reconnectBtn.hidden = true;
+  if (changeServerBtn) changeServerBtn.hidden = state !== 'disconnected';
 
   if (state === 'connected') {
     connDot.classList.add('is-connected');
@@ -433,6 +514,59 @@ speakerBtn.addEventListener('click', () => {
   }
 });
 
+/* --------------------------------------------------------------------------
+   BACKEND HEALTH — tell the user *why* it is disconnected (404 = not deployed,
+   502/503 = starting, no answer = offline) instead of a generic message.
+   -------------------------------------------------------------------------- */
+
+let healthTimer = null;
+
+async function checkBackendHealth() {
+  clearTimeout(healthTimer);
+  let response;
+  try {
+    response = await fetch(BACKEND_URL + '/health', { cache: 'no-store' });
+  } catch (err) {
+    setConnText('Cannot reach the server — check internet or change the server', 'error');
+    return;
+  }
+
+  if (response.status === 404) {
+    setConnText('This address has no Gesto backend (404) — click "Change server"', 'error');
+    if (changeServerBtn) changeServerBtn.hidden = false;
+    return;
+  }
+  if (response.status >= 500) {
+    setConnText('Server is starting up — retrying…', 'warn');
+    healthTimer = setTimeout(checkBackendHealth, 15000);
+    return;
+  }
+  if (!response.ok) {
+    setConnText('Server error ' + response.status, 'error');
+    return;
+  }
+  try {
+    const data = await response.json();
+    if (!data.model_loaded) {
+      setConnText('Server is up but the model is not loaded', 'warn');
+    }
+  } catch (err) {
+    // Health payload is optional; a 200 is already good news.
+  }
+}
+
+/** Write a status line without disturbing the dot state. */
+function setConnText(text, kind) {
+  if (!connText) return;
+  connText.textContent = text;
+  connDot.className = 'conn-dot';
+  connDot.classList.add(kind === 'warn' ? 'is-connecting' : 'is-disconnected');
+}
+
+if (changeServerBtn) {
+  changeServerBtn.addEventListener('click', promptForBackend);
+}
+
 /* ---------- Start / Stop wiring ---------- */
 
 startBtn.addEventListener('click', startCamera);
@@ -440,6 +574,7 @@ stopBtn.addEventListener('click', stopCamera);
 
 // Attempt a background connection on load so status is honest before demo.
 connectWebSocket();
+checkBackendHealth();
 
 /* ---------- Scroll reveal for sections ---------- */
 

@@ -88,9 +88,17 @@ jobs:
           exit $status
 
       - name: Build universal release APK
+        env:
+          # Optional: Settings → Variables → GESTO_API_BASE = https://your-backend
+          API_BASE: ${{ vars.GESTO_API_BASE }}
         run: |
           set +e
-          flutter build apk --release > "$RUNNER_TEMP/build.log" 2>&1
+          ARGS=""
+          if [ -n "$API_BASE" ]; then
+            ARGS="--dart-define=GESTO_API_BASE=$API_BASE"
+            echo "Baking backend URL: $API_BASE"
+          fi
+          flutter build apk --release $ARGS > "$RUNNER_TEMP/build.log" 2>&1
           status=$?
           cat "$RUNNER_TEMP/build.log"
           if [ $status -ne 0 ]; then
@@ -109,9 +117,15 @@ jobs:
           exit 0
 
       - name: Build per-ABI release APKs
+        env:
+          API_BASE: ${{ vars.GESTO_API_BASE }}
         run: |
           set +e
-          flutter build apk --release --split-per-abi > "$RUNNER_TEMP/build.log" 2>&1
+          ARGS=""
+          if [ -n "$API_BASE" ]; then
+            ARGS="--dart-define=GESTO_API_BASE=$API_BASE"
+          fi
+          flutter build apk --release --split-per-abi $ARGS > "$RUNNER_TEMP/build.log" 2>&1
           status=$?
           cat "$RUNNER_TEMP/build.log"
           if [ $status -ne 0 ]; then
