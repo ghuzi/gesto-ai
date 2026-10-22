@@ -55,6 +55,44 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Align Android tooling with the Flutter template
+        run: |
+          flutter create --platforms=android --org ai.gesto --project-name gesto_ai "$RUNNER_TEMP/tpl" >/dev/null
+          python3 - "$RUNNER_TEMP/tpl/android" <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          tpl = pathlib.Path(sys.argv[1])
+          here = pathlib.Path('android')
+
+          def patch(path, pattern, replacement, label):
+              text = path.read_text()
+              new, count = re.subn(pattern, replacement, text)
+              if count:
+                  path.write_text(new)
+              print(f'::notice::{label}: {replacement if count else "unchanged"}')
+
+          tpl_settings = (tpl / 'settings.gradle.kts').read_text()
+          agp = re.search(r'id\("com\.android\.application"\) version "([^"]+)"', tpl_settings)
+          kotlin = re.search(r'id\("org\.jetbrains\.kotlin\.android"\) version "([^"]+)"', tpl_settings)
+          if agp:
+              patch(here / 'settings.gradle.kts',
+                    r'(id\("com\.android\.application"\) version ")[^"]+(")',
+                    r'\g<1>' + agp.group(1) + r'\g<2>', f'AGP {agp.group(1)}')
+          if kotlin:
+              patch(here / 'settings.gradle.kts',
+                    r'(id\("org\.jetbrains\.kotlin\.android"\) version ")[^"]+(")',
+                    r'\g<1>' + kotlin.group(1) + r'\g<2>', f'Kotlin {kotlin.group(1)}')
+
+          tpl_wrapper = (tpl / 'gradle/wrapper/gradle-wrapper.properties').read_text()
+          url = re.search(r'distributionUrl=(.+)', tpl_wrapper)
+          if url:
+              patch(here / 'gradle/wrapper/gradle-wrapper.properties',
+                    r'distributionUrl=.+', 'distributionUrl=' + url.group(1).strip(),
+                    f'Gradle {url.group(1).strip()}')
+          PY
+
       - name: Static analysis
         run: |
           set +e
