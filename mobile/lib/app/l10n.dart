@@ -153,7 +153,7 @@ class L10n {
   String get startDemo => _('Start demo', 'ڈیمو شروع کریں');
 
   // ------------------------------------------------------------- settings
-  String get language => _('App language', 'ایپ کی زبان');
+  String get languageSetting => _('App language', 'ایپ کی زبان');
   String get languageHelp => _('Ui language. Gesture names stay in English.', 'انٹرفیس کی زبان۔ اشاروں کے نام انگریزی میں رہیں گے۔');
   String get backend => _('Backend server', 'بیک اینڈ سرور');
   String get backendHelp => _(

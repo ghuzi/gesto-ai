@@ -139,7 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
         children: <Widget>[
           // ------------------------------------------------------ language
-          _SectionTitle(l.language),
+          _SectionTitle(l.languageSetting),
           SectionCard(
             padding: const EdgeInsets.all(8),
             child: Column(

@@ -59,33 +59,22 @@ jobs:
       - name: Static analysis
         run: |
           set +e
-          flutter analyze --no-fatal-infos --no-fatal-warnings --format=machine \
-            > "$RUNNER_TEMP/analyze.txt" 2>&1
+          flutter analyze --no-fatal-infos --no-fatal-warnings > "$RUNNER_TEMP/analyze.txt" 2>&1
           status=$?
           cat "$RUNNER_TEMP/analyze.txt"
-          python3 - "$RUNNER_TEMP/analyze.txt" <<'PY'
+          if [ $status -ne 0 ]; then
+            python3 - "$RUNNER_TEMP/analyze.txt" <<'PY'
           import sys
 
-          errors = 0
           with open(sys.argv[1], encoding='utf-8', errors='replace') as fh:
-              for raw in fh:
-                  parts = raw.strip().split('|')
-                  if len(parts) < 8 or parts[0] not in {'ERROR', 'WARNING', 'INFO'}:
-                      continue
-                  severity, _kind, code, path, line, col, _length, message = parts[:8]
-                  if severity != 'ERROR':
-                      # Non-fatal: visible in the log, but do not annotate.
-                      print(f'{severity}: {path}:{line} {code} {message}')
-                      continue
-                  errors += 1
-                  message = message.replace('%', '%25').replace('\r', '').replace('\n', '%0A')
-                  print(f'::error file={path},line={line},col={col},title={code}::{message}')
-          print(f'::notice::flutter analyze reported {errors} error(s)')
+              lines = fh.read().splitlines()
+          for line in lines:
+              text = line.replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+              if ' error ' in text or 'error •' in text or 'Error:' in text:
+                  print('::error::' + text.strip()[:900])
           PY
-          if grep -q '^ERROR|' "$RUNNER_TEMP/analyze.txt"; then
-            exit 1
           fi
-          exit 0
+          exit $status
 
       - name: Build universal release APK
         run: |
