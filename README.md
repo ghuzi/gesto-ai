@@ -4,18 +4,9 @@
 
 Real-time Pakistan Sign Language (PSL) → Urdu speech. The backend captures hand landmarks with MediaPipe (Tasks API, VIDEO mode), classifies gestures with a Keras sliding-window model over a WebSocket, and the frontend converts stable gestures into Urdu speech.
 
-**Live demo:** https://gesto-ai-frontend.vercel.app
-> **Backend status (2026-10-22):** `gesto-ai-production.up.railway.app` returns
-> `404 Application not found` — that Railway service was removed, so the web demo
-> and the app show *Server unreachable*. See
-> [backend/DEPLOY.md](chat-1/gesto-ai/backend/DEPLOY.md) to bring it back (Railway,
-> Render or a laptop), then point the app at the new URL in
-> **Home → Server status → Change server**.
-
-**Backend API:** https://gesto-ai-production.up.railway.app (currently offline — see above)
-**Android APK:** https://github.com/ghuzi/gesto-ai/releases/latest — see [mobile/README.md](chat-1/gesto-ai/mobile/README.md)
-
-<img src="chat-1/gesto-ai/mobile/docs/apk-qr.png" alt="QR code to the APK download" width="140" />
+**Live demo (web):** https://gesto-ai-demo.vercel.app
+**Backend API:** https://gesto-backend-production.up.railway.app
+**Android APK:** https://github.com/ghuzi/gesto-ai/releases/latest (see [mobile/README.md](chat-1/gesto-ai/mobile/README.md))
 
 ## Repository layout
 

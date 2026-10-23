@@ -8,7 +8,16 @@
 'use strict';
 
 /* ---------- Configuration ---------- */
-const DEFAULT_BACKEND = 'https://gesto-ai-production.up.railway.app';
+// Live backend: Railway project "exciting-strength", service "gesto-backend".
+const DEFAULT_BACKEND = 'https://gesto-backend-production.up.railway.app';
+// Hosts that used to be the default and no longer exist — migrate away from
+// them automatically instead of showing "Server unreachable".
+const RETIRED_BACKENDS = [
+  'https://gesto-ai-production.up.railway.app',
+  'https://gesto-ai.up.railway.app',
+  'https://gesto-ai-backend.up.railway.app',
+  'https://gesto-ai-api.up.railway.app'
+];
 const BACKEND_STORAGE_KEY = 'gesto.backend';
 const FRAME_INTERVAL_MS = 100;   // ~10 fps to the inference server
 const HISTORY_CAP = 8;           // max entries in the recent-gestures list
@@ -58,7 +67,15 @@ function resolveBackend() {
       return normalized;
     }
     const stored = localStorage.getItem(BACKEND_STORAGE_KEY);
-    if (stored) return normalizeBackend(stored);
+    if (stored) {
+      const normalized = normalizeBackend(stored);
+      if (RETIRED_BACKENDS.indexOf(normalized) !== -1) {
+        // Saved before the server moved — forget it, use the live one.
+        localStorage.removeItem(BACKEND_STORAGE_KEY);
+        return DEFAULT_BACKEND;
+      }
+      return normalized;
+    }
   } catch (err) {
     // Private mode / storage disabled — fall through to the default.
   }

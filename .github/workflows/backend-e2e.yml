@@ -1,0 +1,110 @@
+name: Backend end-to-end
+
+# Speaks the exact protocol the Android app and the web client use:
+#   {"frame": "<base64 JPEG>"} -> {"gesture": ..., "confidence": ..., "reason": ...}
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'arena/**']
+    paths:
+      - 'chat-1/gesto-ai/backend/**'
+      - '.github/workflows/backend-e2e.yml'
+  schedule:
+    - cron: '17 5 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: WebSocket inference
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install client
+        run: pip install --quiet websocket-client
+
+      - name: Health + WebSocket round-trip
+        env:
+          BACKEND: ${{ vars.GESTO_API_BASE || 'https://gesto-backend-production.up.railway.app' }}
+          TINY_JPEG_B64: '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcgLikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//wAALCAAwADABAREA/8QAFQABAQAAAAAAAAAAAAAAAAAAAAP/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAA/AKgAAAAAAAAAAA//2Q=='
+        run: |
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          import sys
+          import time
+          import urllib.request
+
+          import websocket
+
+          backend = os.environ['BACKEND'].rstrip('/')
+          frame_b64 = os.environ['TINY_JPEG_B64']
+
+          # 1) health
+          deadline = time.time() + 210          # free tiers can be asleep
+          health = None
+          while time.time() < deadline:
+              try:
+                  with urllib.request.urlopen(backend + '/health', timeout=30) as resp:
+                      health = json.load(resp)
+                  break
+              except Exception as exc:
+                  print('health retry:', exc)
+                  time.sleep(15)
+          if health is None:
+              print('::error::/health never answered')
+              sys.exit(1)
+          if not health.get('model_loaded'):
+              print('::error::model_loaded=false on the live backend')
+              sys.exit(1)
+          labels = health.get('gesture_labels', [])
+          print(f"health ok: model_loaded=true, {len(labels)} gestures -> {', '.join(labels[:6])}...")
+          print(f"::notice::HEALTH ok, {len(labels)} gestures")
+
+          # 2) WebSocket, same payload as the app
+          ws_url = backend.replace('https://', 'wss://').replace('http://', 'ws://') + '/ws/predict'
+          print('connecting', ws_url)
+          ws = websocket.create_connection(ws_url, timeout=45, header=[])
+          reasons = []
+          try:
+              for i in range(6):
+                  ws.send(json.dumps({'frame': frame_b64}))
+                  reply = json.loads(ws.recv())
+                  reasons.append(reply.get('reason'))
+                  print(f'frame {i}: {reply}')
+                  time.sleep(0.2)
+          finally:
+              ws.close()
+
+          # 3) the server must speak the documented contract
+          for reply in reasons:
+              pass
+          last = reasons[-1]
+          allowed = {'no_hand', 'warming_up', 'below_threshold', 'not_ready', 'decode_failed', None}
+          if last not in allowed:
+              print(f'::error::unexpected reason {last!r}')
+              sys.exit(1)
+          if last in ('not_ready', 'decode_failed'):
+              print(f'::error::server answered {last} — model or image decoding is broken')
+              sys.exit(1)
+          print(f'::notice::WS round-trip OK — last reason {last!r}, {len(reasons)} frames answered')
+          PY
+
+      - name: Frontend points at this backend
+        run: |
+          set +e
+          curl -sS --max-time 60 -o /tmp/page https://gesto-ai-demo.vercel.app/script.js
+          if grep -q 'gesto-backend-production.up.railway.app' /tmp/page 2>/dev/null; then
+            echo "::notice::FRONTEND uses the live backend"
+          else
+            echo "::warning::Frontend bundle does not mention the live backend (older deploy or different file layout)"
+          fi

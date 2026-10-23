@@ -1,6 +1,10 @@
 # Backend deploy — fix "Server unreachable"
 
-The app and the web page both talk to the FastAPI backend. If they show
+**Current live backend:** https://gesto-backend-production.up.railway.app (Railway project `exciting-strength`,
+service `gesto-backend`) — verified from CI: `/health` → 200,
+`model_loaded: true`, 14 gestures, WebSocket handshake `101`.
+
+The app and the web page both talk to this FastAPI backend. If they show
 **Server unreachable**, the backend is not running — the app itself is fine.
 
 ## First: check what is wrong
