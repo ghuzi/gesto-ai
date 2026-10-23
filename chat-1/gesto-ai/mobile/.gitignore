@@ -20,6 +20,8 @@ android/app/release/
 android/app/src/main/res/**/GeneratedPluginRegistrant.java
 *.jks
 *.keystore
+# ...except the shared debug key that keeps CI releases installable in place.
+!android/app/debug.keystore
 
 # Generated logs
 *.log
