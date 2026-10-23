@@ -28,8 +28,8 @@ class AppConfig {
 
   static const String repoUrl = 'https://github.com/ghuzi/gesto-ai';
 
-  static const String version = '1.0.2';
-  static const int buildNumber = 3;
+  static const String version = '1.0.3';
+  static const int buildNumber = 4;
 
   /// ~10 frames per second, matching the web frontend.
   static const int frameIntervalMs = 100;
