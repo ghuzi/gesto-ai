@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gesto AI — Home (v1.0.4 preview)</title>
+<style>
+  :root{
+    --ink:#0B2E33; --ink-soft:#456B70; --teal:#0D9488; --teal-deep:#0F766E;
+    --teal-dark:#0B4F4A; --aqua:#99F6E4; --surface:#F4FAF9; --card:#fff;
+    --line:#DCEBE9; --danger:#E11D48; --amber:#D97706;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,"Noto Sans",Arial,sans-serif;
+    background:#dfeae8;color:var(--ink);display:flex;justify-content:center;
+    padding:28px 16px 48px;min-height:100vh;
+  }
+  .wrap{width:392px}
+  .caption{
+    font-size:12.5px;color:#3d5a5e;text-align:center;margin-bottom:12px;line-height:1.5;
+  }
+  .caption b{color:#0B4F4A}
+  .phone{
+    width:392px;height:812px;background:var(--surface);border-radius:34px;overflow:hidden;
+    box-shadow:0 26px 60px -24px rgba(11,46,51,.45),0 0 0 9px #0b2326,0 0 0 10px #1d3a3d;
+    display:flex;flex-direction:column;position:relative;
+  }
+  /* status bar */
+  .statusbar{
+    height:30px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 22px;font-size:11.5px;font-weight:600;color:var(--ink);
+    background:#EAF7F4;
+  }
+  .statusbar .right{display:flex;gap:6px;align-items:center;font-size:10.5px;letter-spacing:.3px}
+  .scroll{flex:1;overflow-y:auto;overflow-x:hidden}
+  .scroll::-webkit-scrollbar{width:0}
+
+  /* header */
+  header{
+    background:linear-gradient(#EAF7F4,var(--surface));
+    padding:6px 16px 10px 22px;display:flex;align-items:center;gap:10px;
+  }
+  .brandmark{
+    width:34px;height:34px;border-radius:10px;
+    background:linear-gradient(135deg,var(--teal),var(--teal-deep) 55%,var(--teal-dark));
+    display:grid;place-items:center;box-shadow:0 8px 18px -8px rgba(13,148,136,.55);
+  }
+  .brandmark svg{width:21px;height:21px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .brandtitle{font-size:17px;font-weight:900;letter-spacing:-.6px}
+  .brandtitle span{color:var(--teal)}
+  .spacer{flex:1}
+  .pill{
+    display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;
+    background:rgba(13,148,136,.10);border:1px solid rgba(13,148,136,.22);
+    font-size:10.5px;font-weight:800;color:var(--teal-deep);
+  }
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--teal)}
+  .gear{width:34px;height:34px;display:grid;place-items:center;color:var(--ink-soft)}
+  .gear svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7}
+
+  /* body */
+  main{padding:18px 22px 0}
+  h1{font-size:32px;line-height:1.18;font-weight:900;letter-spacing:-1.1px}
+  h1 .accent{color:var(--teal-deep)}
+  .tagline{margin-top:10px;font-size:14.5px;line-height:1.6;color:var(--ink-soft)}
+
+  /* CTA */
+  .cta{
+    margin-top:24px;border-radius:22px;padding:16px;display:flex;align-items:center;gap:14px;
+    background:linear-gradient(135deg,var(--teal),var(--teal-deep) 55%,var(--teal-dark));
+    color:#fff;box-shadow:0 18px 34px -18px rgba(13,148,136,.75);cursor:pointer;
+  }
+  .cta .glyph{
+    width:46px;height:46px;border-radius:15px;background:rgba(255,255,255,.16);
+    display:grid;place-items:center;flex:none;
+  }
+  .cta .glyph svg{width:23px;height:23px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .cta .text{flex:1}
+  .cta .title{font-size:16.5px;font-weight:800;letter-spacing:-.2px}
+  .cta .sub{font-size:12px;color:rgba(255,255,255,.78);margin-top:2px}
+  .cta .arrow{color:rgba(255,255,255,.9);font-size:18px;font-weight:700}
+
+  /* section */
+  .sechead{display:flex;align-items:center;margin:30px 0 10px}
+  .sechead h2{font-size:15px;font-weight:700;letter-spacing:-.2px}
+  .sechead .more{
+    margin-left:auto;font-size:12px;font-weight:700;color:var(--teal-deep);
+    display:flex;align-items:center;gap:2px;
+  }
+  .sechead.tight{margin:26px 0 12px}
+
+  /* rows */
+  .row{
+    display:flex;align-items:center;gap:11px;background:var(--card);
+    border:1px solid var(--line);border-radius:16px;padding:11px 12px;margin-bottom:8px;
+  }
+  .row .icon{
+    width:34px;height:34px;border-radius:11px;background:rgba(13,148,136,.09);
+    display:grid;place-items:center;flex:none;color:var(--teal-deep);
+  }
+  .row .icon svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .row .body{flex:1;min-width:0}
+  .row .en{font-size:14px;font-weight:700}
+  .row .ur{font-size:12px;line-height:1.7;color:var(--ink-soft);direction:rtl;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .time{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--ink-soft)}
+  .row .speak{color:var(--ink-soft);display:grid;place-items:center}
+  .row .speak svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+
+  /* gesture strip */
+  .strip{display:flex;gap:8px;overflow-x:auto;padding:0 22px 22px;scrollbar-width:none}
+  .strip::-webkit-scrollbar{display:none}
+  .chip{
+    flex:none;width:96px;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:9px 8px;text-align:center;
+  }
+  .chip .en{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip .ur{font-size:12.5px;font-weight:600;color:var(--teal-deep);margin-top:3px;direction:rtl;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* bottom bar */
+  nav{
+    height:58px;background:var(--card);border-top:1px solid var(--line);
+    display:flex;flex:none;
+  }
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:rgba(69,107,112,.78)}
+  .tab .ico{padding:3px 12px;border-radius:9px;display:grid;place-items:center}
+  .tab .ico svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .tab span{font-size:10.5px;font-weight:600;letter-spacing:.1px}
+  .tab.active{color:var(--teal-deep)}
+  .tab.active .ico{background:rgba(13,148,136,.10)}
+  .tab.active span{font-weight:800}
+  .homebar{height:14px;background:var(--card);display:grid;place-items:center;flex:none}
+  .homebar i{width:120px;height:4px;border-radius:99px;background:#c9dad7;display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="caption">
+    <b>Design preview</b> — HTML mock of the Flutter home screen shipped in v1.0.4.<br/>
+    Same tokens as the app: #0D9488 / #0F766E · Material 3 · 22px gutters.
+  </p>
+
+  <div class="phone">
+    <div class="statusbar">
+      <span>1:02 PM</span>
+      <span class="right">▮▮▮ ᯤ 4G ▮</span>
+    </div>
+
+    <div class="scroll">
+      <header>
+        <div class="brandmark">
+          <svg viewBox="0 0 24 24"><path d="M7 11V6a1.5 1.5 0 0 1 3 0v4"/><path d="M10 10V4.5a1.5 1.5 0 0 1 3 0V10"/><path d="M13 10V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M16 12v-1a1.5 1.5 0 0 1 3 0v4c0 3.5-2.5 6-6 6h-1c-2 0-3.2-.7-4.3-1.8L4 15.5c-.6-.6-.6-1.5 0-2.1.6-.6 1.5-.6 2.1 0L7 14.3"/></svg>
+        </div>
+        <div class="brandtitle">Gesto <span>AI</span></div>
+        <div class="spacer"></div>
+        <div class="pill"><i class="dot"></i>Live</div>
+        <div class="gear">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.5-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.1a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4z"/></svg>
+        </div>
+      </header>
+
+      <main>
+        <h1>Sign it.<br/><span class="accent">We speak Urdu.</span></h1>
+        <p class="tagline">Point the camera at your hands — Gesto reads the sign and says it out loud.</p>
+
+        <div class="cta">
+          <div class="glyph">
+            <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          </div>
+          <div class="text">
+            <div class="title">Start signing</div>
+            <div class="sub">Camera · real time · Urdu voice</div>
+          </div>
+          <div class="arrow">→</div>
+        </div>
+
+        <div class="sechead">
+          <h2>Recent gestures</h2>
+          <div class="more">See all <span>›</span></div>
+        </div>
+
+        <div class="row">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M6 9V4.5a1.5 1.5 0 0 1 3 0V9"/><path d="M9 9V3.5a1.5 1.5 0 0 1 3 0V9"/><path d="M12 9V5a1.5 1.5 0 0 1 3 0v6"/><path d="M15 11V9a1.5 1.5 0 0 1 3 0v5c0 3.3-2.7 6-6 6-1.6 0-2.9-.6-4-1.6L5 14.5c-.6-.6-.6-1.5 0-2.1.6-.6 1.5-.6 2.1 0L9 14"/></svg></div>
+          <div class="body">
+            <div class="en">Help</div>
+            <div class="ur">مدد چاہیے</div>
+          </div>
+          <div class="time">12:04</div>
+          <div class="speak"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></div>
+        </div>
+
+        <div class="row">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M6 9V4.5a1.5 1.5 0 0 1 3 0V9"/><path d="M9 9V3.5a1.5 1.5 0 0 1 3 0V9"/><path d="M12 9V5a1.5 1.5 0 0 1 3 0v6"/><path d="M15 11V9a1.5 1.5 0 0 1 3 0v5c0 3.3-2.7 6-6 6-1.6 0-2.9-.6-4-1.6L5 14.5c-.6-.6-.6-1.5 0-2.1.6-.6 1.5-.6 2.1 0L9 14"/></svg></div>
+          <div class="body">
+            <div class="en">Doctor</div>
+            <div class="ur">ڈاکٹر</div>
+          </div>
+          <div class="time">12:03</div>
+          <div class="speak"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></div>
+        </div>
+
+        <div class="row">
+          <div class="icon"><svg viewBox="0 0 24 24"><path d="M6 9V4.5a1.5 1.5 0 0 1 3 0V9"/><path d="M9 9V3.5a1.5 1.5 0 0 1 3 0V9"/><path d="M12 9V5a1.5 1.5 0 0 1 3 0v6"/><path d="M15 11V9a1.5 1.5 0 0 1 3 0v5c0 3.3-2.7 6-6 6-1.6 0-2.9-.6-4-1.6L5 14.5c-.6-.6-.6-1.5 0-2.1.6-.6 1.5-.6 2.1 0L9 14"/></svg></div>
+          <div class="body">
+            <div class="en">Thankyou</div>
+            <div class="ur">شکریہ</div>
+          </div>
+          <div class="time">11:58</div>
+          <div class="speak"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></div>
+        </div>
+
+        <div class="sechead tight">
+          <h2>Signs you can use</h2>
+        </div>
+      </main>
+
+      <div class="strip">
+        <div class="chip"><div class="en">Ambulance</div><div class="ur">ایمبولینس</div></div>
+        <div class="chip"><div class="en">Doctor</div><div class="ur">ڈاکٹر</div></div>
+        <div class="chip"><div class="en">Drink</div><div class="ur">پانی چاہیے</div></div>
+        <div class="chip"><div class="en">Eat</div><div class="ur">کھانا چاہیے</div></div>
+        <div class="chip"><div class="en">Good</div><div class="ur">اچھا</div></div>
+        <div class="chip"><div class="en">Help</div><div class="ur">مدد چاہیے</div></div>
+      </div>
+    </div>
+
+    <nav>
+      <div class="tab active">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg></div>
+        <span>Home</span>
+      </div>
+      <div class="tab">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+        <span>Live Demo</span>
+      </div>
+      <div class="tab">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/></svg></div>
+        <span>History</span>
+      </div>
+      <div class="tab">
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".6" fill="currentColor"/></svg></div>
+        <span>About</span>
+      </div>
+    </nav>
+    <div class="homebar"><i></i></div>
+  </div>
+</div>
+</body>
+</html>
