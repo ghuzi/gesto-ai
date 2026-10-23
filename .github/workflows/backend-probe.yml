@@ -9,7 +9,7 @@ on:
     inputs:
       url:
         description: 'Backend base URL to probe'
-        default: 'https://gesto-ai-production.up.railway.app'
+        default: 'https://gesto-backend-production.up.railway.app'
 
 concurrency:
   group: backend-probe
@@ -21,9 +21,9 @@ jobs:
     steps:
       - name: Probe Railway backend
         run: |
-          URL="${{ inputs.url || 'https://gesto-ai-production.up.railway.app' }}"
+          URL="${{ inputs.url || 'https://gesto-backend-production.up.railway.app' }}"
           echo "=== DNS ==="
-          getent hosts gesto-ai-production.up.railway.app || echo "::error::DNS did not resolve"
+          getent hosts "$(echo "$URL" | sed -E 's#https?://##')" || echo "::error::DNS did not resolve"
           echo "=== GET /health ==="
           set +e
           curl -sS -o /tmp/body -D /tmp/headers \

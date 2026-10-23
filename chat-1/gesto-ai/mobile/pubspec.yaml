@@ -1,7 +1,7 @@
 name: gesto_ai
 description: "Gesto AI — real-time Pakistan Sign Language (PSL) to Urdu speech, on Android."
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.0.2+3
 
 environment:
   sdk: '>=3.5.0 <4.0.0'

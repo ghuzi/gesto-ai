@@ -85,7 +85,17 @@ class AppState extends ChangeNotifier {
     _onboarded = prefs.getBool(_kOnboarded) ?? false;
     _speechEnabled = prefs.getBool(_kSpeechEnabled) ?? true;
     _speechRate = prefs.getDouble(_kSpeechRate) ?? 0.5;
-    backend.baseUrl = prefs.getString(_kBaseUrl) ?? AppConfig.defaultBaseUrl;
+    // Migrate servers that used to be the default but no longer exist, so an
+    // updated APK does not keep pointing at a dead host saved months ago.
+    final String? savedUrl = prefs.getString(_kBaseUrl);
+    final bool retired = savedUrl != null &&
+        AppConfig.retiredDefaults.contains(savedUrl.trim());
+    backend.baseUrl = (savedUrl == null || retired)
+        ? AppConfig.defaultBaseUrl
+        : savedUrl;
+    if (retired) {
+      await prefs.setString(_kBaseUrl, AppConfig.defaultBaseUrl);
+    }
 
     final String? rawHistory = prefs.getString(_kHistory);
     if (rawHistory != null && rawHistory.isNotEmpty) {
@@ -156,6 +166,8 @@ class AppState extends ChangeNotifier {
     _healthLoading = true;
     if (!silent) _healthError = null;
     _notify();
+
+    bool healToDefault = false;
     try {
       final BackendHealth result = await backend.fetchHealth();
       _health = result;
@@ -166,7 +178,12 @@ class AppState extends ChangeNotifier {
       _health = null;
       _healthError = error.message;
       _healthFailure = error.failure;
-      _scheduleHealthRetry();
+
+      // A retired host is still saved: switch to the live default and re-probe.
+      healToDefault = error.failure == BackendFailure.notDeployed &&
+          backend.baseUrl != AppConfig.defaultBaseUrl &&
+          AppConfig.retiredDefaults.contains(backend.baseUrl);
+      if (!healToDefault) _scheduleHealthRetry();
     } on Object catch (error) {
       _health = null;
       _healthError = error.toString();
@@ -176,6 +193,13 @@ class AppState extends ChangeNotifier {
       _healthLoading = false;
       _healthCheckedAt = DateTime.now();
       _notify();
+    }
+
+    if (healToDefault) {
+      backend.baseUrl = AppConfig.defaultBaseUrl;
+      await _prefs?.setString(_kBaseUrl, AppConfig.defaultBaseUrl);
+      _healthFailure = null;
+      await refreshHealth(silent: silent);
     }
   }
 

@@ -156,6 +156,31 @@ jobs:
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk      "$out/gesto-ai-$VERSION-x86_64.apk"
           ls -lh "$out"
 
+      - name: Verify the baked backend URL
+        run: |
+          python3 - <<'PY'
+          import zipfile
+
+          apk = 'build/app/outputs/flutter-apk/app-release.apk'
+          want = b'gesto-backend-production.up.railway.app'
+          dead = b'gesto-ai-production.up.railway.app'
+
+          with zipfile.ZipFile(apk) as z:
+              blobs = {name: z.read(name) for name in z.namelist()
+                       if name.endswith('.so') or name.endswith('.bin')}
+
+          hits = [n for n, data in blobs.items() if want in data]
+          legacy = [n for n, data in blobs.items() if dead in data]
+
+          print('live URL found in:', hits or 'NOT FOUND')
+          print('cold URL found in (expected only as a migration constant):', legacy or 'none')
+
+          if not hits:
+              print('::error::the release APK does not contain the live backend URL')
+              raise SystemExit(1)
+          print('::notice::APK default backend = gesto-backend-production.up.railway.app')
+          PY
+
       - name: Verify APK signatures
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)

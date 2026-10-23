@@ -10,7 +10,7 @@ Railway server.
 | Package | `ai.gesto.app` |
 | Min Android | 7.0 (Flutter default) |
 | Built with | Flutter stable · Dart 3 · Material 3 |
-| Backend | configurable — default `https://gesto-ai-production.up.railway.app` (offline since Oct 2026, see below) |
+| Backend | `https://gesto-backend-production.up.railway.app` (changeable at runtime) |
 
 ## Download the APK
 
@@ -24,17 +24,17 @@ Then pick one file:
 
 | File | Use it for |
 | --- | --- |
-| `gesto-ai-1.0.0-universal.apk` | Any Android phone (safest, ~58 MB) |
-| `gesto-ai-1.0.0-arm64-v8a.apk` | Modern 64-bit phones (~24 MB) |
-| `gesto-ai-1.0.0-armeabi-v7a.apk` | Older 32-bit phones (~21 MB) |
-| `gesto-ai-1.0.0-x86_64.apk` | Emulators |
+| `gesto-ai-<version>-universal.apk` | Any Android phone (safest, ~58 MB) |
+| `gesto-ai-<version>-arm64-v8a.apk` | Modern 64-bit phones (~24 MB) |
+| `gesto-ai-<version>-armeabi-v7a.apk` | Older 32-bit phones (~21 MB) |
+| `gesto-ai-<version>-x86_64.apk` | Emulators |
 
 **Install:** open the downloaded file → Android asks to allow installs from your
 browser/file manager → *Allow* → *Install*. Android 7.0+ required. Releases are
 signed with the debug key, so Play Protect may show a "scan" prompt — choose
 *Install anyway*.
 
-To build a new release: `git tag android-v1.0.1 && git push origin android-v1.0.1`
+To build a new release: `git tag android-v1.0.3 && git push origin android-v1.0.3`
 (bump `version:` in `pubspec.yaml` first). The tag push builds and uploads the
 APKs automatically.
 
@@ -43,11 +43,14 @@ APKs automatically.
 The app never crashes when the backend is down — the Home card shows what went
 wrong, keeps retrying on its own (15 s → 30 s → 60 s) and offers **Change server**.
 
-* `HTTP 404 — no backend is deployed at this address` → the Railway service was
-  deleted. Follow [../backend/DEPLOY.md](../backend/DEPLOY.md) to redeploy,
-  then set the new URL in **Home → Server status → Change server**.
-* `HTTP 502/503` or a timeout → the free instance is sleeping; wait a minute.
+* `HTTP 404 — no backend is deployed at this address` → wrong/deleted host.
+  Tap **Change server** (or **Settings → Backend server**) and paste the live URL.
+* `HTTP 502/503` or a timeout → the free instance is waking up; wait a minute.
 * No internet → fix Wi-Fi/mobile data.
+
+**v1.0.2 auto-heals old installs:** if the saved server is one of the retired
+hosts (`gesto-ai-production.up.railway.app` and friends) it is replaced with the
+current live backend on start-up — no Settings trip needed.
 
 ## What the app does
 
