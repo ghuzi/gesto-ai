@@ -121,8 +121,8 @@ class L10n {
   String get cameraUnavailable => _('No camera found on this device.', 'اس ڈیوائس پر کوئی کیمرہ نہیں ملا۔');
   String get cameraFailed => _('Could not start the camera.', 'کیمرہ شروع نہیں ہو سکا۔');
   String get frameFormatUnsupported => _(
-        'This device does not expose a JPEG camera stream. Try an Android phone.',
-        'یہ ڈیوائس JPEG کیمرہ اسٹریم نہیں دیتی۔ اینڈرائیڈ فون آزمائیں۔',
+        'Could not read a camera frame. Tap Stop, then Start Camera again.',
+        'کیمرے کا فریم نہیں پڑھا جا سکا۔ ”بند کریں“ دبا کر دوبارہ ”کیمرہ شروع کریں“۔',
       );
   String get signHere => _('Sign inside the frame', 'فریم کے اندر اشارہ کریں');
   String framesSent(int n) => isUrdu ? '$n فریم بھیجے گئے' : '$n frames sent';

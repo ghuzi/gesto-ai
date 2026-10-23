@@ -185,11 +185,27 @@ jobs:
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           echo "Using $BT"
+          EXPECTED=$(keytool -list -v -keystore app/debug.keystore -storepass android \
+            -alias androiddebugkey | grep -oE 'SHA256: [0-9A-F:]+' | head -1 \
+            | sed -E 's/SHA256: //' | tr -d ':' | tr 'A-F' 'a-f')
+          echo "committed keystore SHA-256: $EXPECTED"
+
           for f in "$GITHUB_WORKSPACE"/artifacts/*.apk; do
             echo "=== $(basename "$f") ==="
-            "$BT/apksigner" verify --print-certs "$f" | head -5
+            "$BT/apksigner" verify --print-certs "$f" | head -6
+            ACTUAL=$("$BT/apksigner" verify --print-certs "$f" \
+              | grep -oE 'certificate SHA-256 digest: [0-9a-f]+' | head -1 \
+              | awk '{print $NF}')
+            echo "apk signer SHA-256: $ACTUAL"
+            if [ -n "$EXPECTED" ] && [ "$ACTUAL" != "$EXPECTED" ]; then
+              echo "::error::$(basename "$f") is not signed with the committed debug key (updates would not install in place)"
+              exit 1
+            fi
             echo "::notice::$(basename "$f") | $("$BT/aapt2" dump badging "$f" 2>/dev/null | grep -E '^(package|sdkVersion|targetSdkVersion)' | tr '\n' ' ')"
           done
+          echo "::notice::All APKs are signed with the shared debug key (in-place updates work)"
+
+
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:io' show Platform;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +13,7 @@ import '../app/theme.dart';
 import '../data/urdu_words.dart';
 import '../models/gesture_event.dart';
 import '../models/prediction.dart';
+import '../services/frame_encoder.dart';
 import '../services/prediction_socket.dart';
 import '../services/tts_service.dart';
 import '../widgets/brand_mark.dart';
@@ -35,6 +36,7 @@ class DemoScreen extends StatefulWidget {
 
 class _DemoScreenState extends State<DemoScreen> with WidgetsBindingObserver {
   final TtsService _tts = TtsService.instance;
+  final FrameEncoder _encoder = FrameEncoder();
 
   CameraController? _camera;
   List<CameraDescription> _cameras = <CameraDescription>[];
@@ -48,6 +50,7 @@ class _DemoScreenState extends State<DemoScreen> with WidgetsBindingObserver {
   bool _live = false;
   bool _awaiting = false;
   bool _formatWarned = false;
+  bool _encoding = false;
   bool _wasLiveBeforePause = false;
 
   DateTime _lastSendAt = DateTime.fromMillisecondsSinceEpoch(0);
@@ -251,7 +254,11 @@ class _DemoScreenState extends State<DemoScreen> with WidgetsBindingObserver {
         description,
         ResolutionPreset.medium,
         enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.jpeg,
+        // Android only streams YUV_420_888; `jpeg` silently falls back and was
+        // why "0 frames sent" appeared. iOS does support JPEG directly.
+        imageFormatGroup: Platform.isAndroid
+            ? ImageFormatGroup.yuv420
+            : ImageFormatGroup.jpeg,
       );
 
       await controller.initialize();
@@ -337,6 +344,7 @@ class _DemoScreenState extends State<DemoScreen> with WidgetsBindingObserver {
     if (now.difference(_lastSendAt).inMilliseconds < AppConfig.frameIntervalMs) {
       return;
     }
+    if (_encoding) return;
     if (_awaiting) {
       if (now.difference(_awaitingSince).inMilliseconds <
           AppConfig.frameTimeoutMs) {
@@ -345,30 +353,45 @@ class _DemoScreenState extends State<DemoScreen> with WidgetsBindingObserver {
       _awaiting = false;
     }
 
-    if (image.format.group != ImageFormatGroup.jpeg) {
-      if (!_formatWarned) {
-        _formatWarned = true;
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(L10n.of(context).frameFormatUnsupported)),
-          );
-        }
-      }
-      return;
-    }
-
-    if (image.planes.isEmpty) return;
-    final Uint8List bytes = image.planes.first.bytes;
-    if (bytes.isEmpty) return;
-
     _lastSendAt = now;
-    _awaitingSince = now;
-    if (socket.sendFrame(bytes)) {
-      _awaiting = true;
-      _framesSent++;
-      if (_framesSent % 10 == 0 && mounted) setState(() {});
+    _encoding = true;
+    unawaited(_encodeAndSend(image, socket));
+  }
+
+  /// Converts the camera frame to JPEG (native YUV encoder on Android) and
+  /// pushes it to the server. Runs off the camera callback so the preview
+  /// never stutters.
+  Future<void> _encodeAndSend(CameraImage image, PredictionSocket socket) async {
+    try {
+      final EncodedFrame? frame = await _encoder.encode(image);
+      if (frame == null) {
+        _warnFrameProblem();
+        return;
+      }
+      if (!mounted || !_live || _socket != socket || !socket.isConnected) return;
+
+      _awaitingSince = DateTime.now();
+      if (socket.sendFrame(frame.bytes)) {
+        _awaiting = true;
+        _framesSent++;
+        if (_framesSent % 10 == 0 && mounted) setState(() {});
+      }
+    } on Object catch (error) {
+      debugPrint('[gesto-ai] frame pipeline error: $error');
+      _warnFrameProblem();
+    } finally {
+      _encoding = false;
     }
   }
+
+  void _warnFrameProblem() {
+    if (_formatWarned || !mounted) return;
+    _formatWarned = true;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(L10n.of(context).frameFormatUnsupported)),
+    );
+  }
+
 
   Future<void> _flipCamera() async {
     if (_cameras.length < 2) return;

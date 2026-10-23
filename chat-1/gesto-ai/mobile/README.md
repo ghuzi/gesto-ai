@@ -34,6 +34,11 @@ browser/file manager → *Allow* → *Install*. Android 7.0+ required. Releases 
 signed with the debug key, so Play Protect may show a "scan" prompt — choose
 *Install anyway*.
 
+* **v1.0.3 and later install over each other** — the repo carries a shared
+  `android/app/debug.keystore`, and CI asserts every APK is signed with it.
+* Coming from v1.0.0–v1.0.2 (built with a per-run key), uninstall the old app
+  **once**; after that updates are in-place.
+
 To build a new release: `git tag android-v1.0.3 && git push origin android-v1.0.3`
 (bump `version:` in `pubspec.yaml` first). The tag push builds and uploads the
 APKs automatically.
@@ -151,11 +156,13 @@ chat-1/gesto-ai/mobile/
 │   ├── app/          # theme, localisation (en/ur), AppState, config
 │   ├── data/         # gesture → Urdu / Devanagari maps, default labels
 │   ├── models/       # Prediction, GestureEvent, BackendHealth
-│   ├── services/     # HTTP + WebSocket client, TTS
+│   ├── services/     # HTTP + WebSocket client, frame encoder, TTS
 │   ├── screens/      # onboarding, home, demo, history, settings, about
 │   └── widgets/      # cards, confidence bar, scanline, brand mark…
 ├── assets/team/      # team photos (same files as the web app)
-└── android/          # Gradle project (AGP 8.9, Kotlin 2.1, Gradle 8.12)
+└── android/          # Gradle project (AGP 9.1, Kotlin 2.4, Gradle 9.3)
+    └── app/src/main/kotlin/ai/gesto/app/MainActivity.kt
+                        # YUV_420_888 → NV21 → JPEG method channel
 ```
 
 ## Troubleshooting
@@ -166,3 +173,4 @@ chat-1/gesto-ai/mobile/
 | “Model not loaded” | The backend started without the `.h5` / `.pkl` / `.task` files. See the root README. |
 | No sound | Install an Urdu or Hindi TTS voice in Android settings → Languages → Text-to-speech. Settings shows which voice the app found. |
 | Camera black screen | Another app is holding the camera, or the emulator has no camera. Use a physical phone. |
+| *"0 frames sent"* / “Could not read a camera frame” | Fixed in v1.0.3. Android has no JPEG image stream — the app now asks for YUV_420_888 and converts it to JPEG natively (`ai.gesto.app/camera_codec`). Update to the latest APK. |

@@ -39,6 +39,18 @@ android {
     }
 
     signingConfigs {
+        // A committed debug key means every CI release is signed with the same
+        // certificate, so a new APK installs *over* the previous one. (A fresh
+        // per-run debug key would force users to uninstall first.)
+        getByName("debug") {
+            val sharedDebugKey = file("debug.keystore")
+            if (sharedDebugKey.exists()) {
+                storeFile = sharedDebugKey
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
         if (hasUploadKey) {
             create("release") {
                 storeFile = uploadStoreFile
