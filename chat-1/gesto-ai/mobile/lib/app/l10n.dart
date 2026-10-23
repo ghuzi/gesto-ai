@@ -38,6 +38,22 @@ class L10n {
 
   // ----------------------------------------------------------------- home
   String get heroEyebrow => _('Real-time PSL → Urdu Speech', 'فوری پاکستانی اشاروں کی زبان → اردو آواز');
+  // ------------------------------------------------------------ minimal home
+  String get heroLine1 => _('Sign it.', 'اشارہ کریں۔');
+  String get heroLine2 => _('We speak Urdu.', 'ہم اردو بولتے ہیں۔');
+  String get taglineShort => _(
+        'Point the camera at your hands — Gesto reads the sign and says it out loud.',
+        'کیمرہ اپنے ہاتھوں کی طرف رکھیں — گسٹو اشارہ پڑھ کر بول کر سناتا ہے۔',
+      );
+  String get startSigning => _('Start signing', 'اشارہ شروع کریں');
+  String get ctaSubtitle => _('Camera · real time · Urdu voice', 'کیمرہ · فوری · اردو آواز');
+  String get signsYouCanUse => _('Signs you can use', 'آپ یہ اشارے استعمال کر سکتے ہیں');
+  String get seeAll => _('See all', 'سب دیکھیں');
+  String get statusLive => _('Live', 'لائیو');
+  String get statusOffline => _('Offline', 'آف لائن');
+  String get statusNoModel => _('No model', 'ماڈل نہیں');
+  String get statusChecking => _('Checking', 'جانچ');
+
   String get heroTagline => _(
         'Turning Pakistan Sign Language into spoken Urdu — instantly — so deaf and mute voices are finally heard.',
         'پاکستانی اشاروں کی زبان کو فوراً اردو آواز میں بدل کر بہرے اور گونگے لوگوں کی آواز بنتے ہیں۔',
